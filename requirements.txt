@@ -1,0 +1,7 @@
+openai
+tweepy
+pandas
+python-dotenv
+duckduckgo_search
+tenacity
+google-search-results
