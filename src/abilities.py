@@ -55,7 +55,7 @@ def reply_to_tweet_by_hashtag(hashtag, like, mood, nuance, ai_personality, model
         # 433 - The original Tweet author restricted who can reply to this Tweet.
 
         status, error = reply_to_tweet(tweet=tweet, like=like, ai_response=response, image_path=None)
-        if error:
+        if error != 200:
             logger.info(f"Sending not Successful got error: {error}")
             t = {
                 "hashtag": hashtag,
