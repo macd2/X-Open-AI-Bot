@@ -79,16 +79,15 @@ def post_tweet():
         logger.info(f"---> {datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')}: Post new tweets complete sleeping for minutes: {int(sleep_time / 60)}")
         sleep(sleep_time)
 
-#
-# if __name__ == "__main__":
-#     p1 = Process(target=post_tweet)
-#     p1.start()
-#     p2 = Process(target=reply_mentions)
-#     p2.start()
-#     p3 = Process(target=reply_tweet)
-#     p3.start()
-#     p1.join()
-#     p2.join()
-#     p3.join()
 
-post_tweet()
+if __name__ == "__main__":
+    p1 = Process(target=post_tweet)
+    p1.start()
+    p2 = Process(target=reply_mentions)
+    p2.start()
+    p3 = Process(target=reply_tweet)
+    p3.start()
+    p1.join()
+    p2.join()
+    p3.join()
+
