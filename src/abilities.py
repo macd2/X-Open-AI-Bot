@@ -1,30 +1,30 @@
-import logging
 import random
 import time
 from time import sleep
 
-from src.helper import get_hash, replace_hashtags, get_cosine_simalarity_score, \
+from src.helper import get_hash, replace_hashtags, get_cosine_similarity_score, \
     unified_logger_output
+from src.logger_handler import setup_logger
 from src.open_ai_handler import ask_gpt, tweak_gpt_outputs
 from src.prompt_engineering import build_twitter_prompt, build_chat_log_conversation, build_twitter_prompt_for_news
 from src.search_handler import return_news_list
 from src.sql_handler import sql_check_text_already_replied, sql_write_replied_tweet_meta, \
-    sql_mention_already_asnwered, \
+    sql_mention_already_answered, \
     sql_write_mentions_meta, sql_news_already_posted, sql_write_timeline_posts, sql_get_n_latest_records
 from src.twitter_handler import reply_to_tweet, get_mentions, post_a_tweet, get_tweets_and_filter
 
-logger = logging.getLogger()
+logger = setup_logger()
 
 
 def reply_to_tweet_by_hashtag(hashtag, like, mood, nuance, ai_personality, model, temperature=0.8,
-                              use_cahched_tweets=True, n_posts=1):
+                              use_cached_tweets=True, n_posts=1):
     logger.info(f"Filter tweets by hashtag: {hashtag}")
 
-    filtered_tweets, hashtag = get_tweets_and_filter(use_cahched_tweets=use_cahched_tweets, hashtag=hashtag)
+    filtered_tweets, hashtag = get_tweets_and_filter(use_cached_tweets=use_cached_tweets, hashtag=hashtag)
 
-    if use_cahched_tweets and sql_check_text_already_replied(filtered_tweets[-1]["full_text_hash"]):
+    if use_cached_tweets and sql_check_text_already_replied(filtered_tweets[-1]["full_text_hash"]):
         # If the last element in the filtered tweet is already in the database this means we need to fetch new tweets
-        filtered_tweets, hashtag = get_tweets_and_filter(use_cahched_tweets=False, hashtag=hashtag)
+        filtered_tweets, hashtag = get_tweets_and_filter(use_cached_tweets=False, hashtag=hashtag)
 
     logger.info(f"Got {len(filtered_tweets)} filtered tweets")
     logger.info("")
@@ -54,7 +54,7 @@ def reply_to_tweet_by_hashtag(hashtag, like, mood, nuance, ai_personality, model
         # tweepy.errors.Forbidden: 403 Forbidden
         # 433 - The original Tweet author restricted who can reply to this Tweet.
 
-        status, error = reply_to_tweet(tweet=tweet, like=like, ai_response=response, image_path=None)
+        status, error = reply_to_tweet(tweet=tweet, like=like, ai_response=response)
         if error != 200:
             logger.info(f"Sending not Successful got error: {error}")
             t = {
@@ -114,7 +114,7 @@ def reply_to_mentions(like, mood, nuance, ai_personality, temperature, model):
 
     for tweet in mentions:
         # Check if the mention has already been answered in the database
-        if sql_mention_already_asnwered(tweet["id"]):
+        if sql_mention_already_answered(tweet["id"]):
             logger.info(f"No action mention already replied to: {tweet['id']}\n")
             continue
 
@@ -149,7 +149,7 @@ def reply_to_mentions(like, mood, nuance, ai_personality, temperature, model):
 
         # Reply to the tweet and get the status of the reply
         logger.info("Sending Reply to mention...")
-        status, error = reply_to_tweet(tweet=tweet, ai_response=response, like=True)
+        status, error = reply_to_tweet(tweet=tweet, ai_response=response, like=like)
         if error != 200:
             # when the poster replies anything else than 200 we encountered an error.
             logger.info(error)
@@ -191,14 +191,14 @@ def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, mode
 
     # make sure to post different content
     # there for we check for similarity in the posts
-    last_ten_posts = [x[0] for x in sql_get_n_latest_records(table_name='timeline_posts', columne_name="body", n=10)]
+    last_ten_posts = [x[0] for x in sql_get_n_latest_records(table_name='timeline_posts', column_name="body", n=10)]
 
     result_list = []
     while not result_list:
         for v in ddgs_news_gen:
             sublist = []
             for i in last_ten_posts:
-                score = get_cosine_simalarity_score(text1=v["body"], text2=i)
+                score = get_cosine_similarity_score(text1=v["body"], text2=i)
                 if score > 0.45:
                     sublist.append(False)
                 else:

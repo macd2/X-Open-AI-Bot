@@ -1,5 +1,5 @@
 config = dict(
-    hastags=['crypto',
+    hashtags=['crypto',
              'bitcoin',
              'money',
              'cryptocurrency',
@@ -107,7 +107,7 @@ config = dict(
 
     moods=[
         "with a question",
-        "by disagreeing",
+        "by dissagreeing",
         "as if you where crumpy",
         ", pretend you you are a grumpy person",
         "with a joke",
@@ -121,7 +121,7 @@ config = dict(
 
     moods_news_post=[
         "nice an engaging",
-        "in a way to provoce a response",
+        "in a way to provoke a response",
         "by keeping in mind you main target is to go viral"
     ],
 

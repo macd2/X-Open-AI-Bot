@@ -1,4 +1,4 @@
-import logging
+from src.logger_handler import setup_logger
 import random
 from time import sleep
 
@@ -8,8 +8,9 @@ from serpapi import GoogleSearch
 
 from config import config
 from src.helper import get_hash
-from src.pickle_handler import laod_pickle, write_pickle
+from src.pickle_handler import load_pickle, write_pickle
 
+logger = setup_logger()
 
 # source https://github.com/deedy5/duckduckgo_search
 
@@ -49,7 +50,7 @@ def get_news_api(search_term):
             i["body_hash"] = get_hash(i["body"])
             i["search_term"] = search_term
     except Exception as e:
-        logging.info(f"Fetching news not successful got: {e}")
+        logger.info(f"Fetching news not successful got: {e}")
         return None
     return results["news_results"]
 
@@ -67,30 +68,31 @@ def filter_out_old_news_api(news: list, hours_since: int):
 
 
 def return_news_list(search_term, use_cache, use_api=True, hrs_since_news=8):
-    # ToDo Automate the use_api by checking of a value for the api was provided in the .env file
+    env = dotenv_values(".env")
+    # ToDo Automate the use_api by checking of a value for the api_ was provided in the .env file
     search_result_file_name = "search_results"
 
     search_results = None
     if use_cache:
         try:
-            search_results = laod_pickle(filename=search_result_file_name, max_file_age_hrs=10)
+            search_results = load_pickle(filename=search_result_file_name, max_file_age_hrs=10)
             search_term = search_results[0]["search_term"]
             if search_results:
                 return search_results, search_term
         except Exception as e:
-            logging.info(f"News Not fetched got: {e}")
+            logger.info(f"News Not fetched got: {e}")
 
     # if no news found, or they are older than specified than get new set of news
     while not search_results:
         sleep(random.randrange(10, 20))
-        if use_api:
+        if use_api and env["serpapi"]:
             search_results = get_news_api(search_term=search_term)
             if search_results:
                 search_results = filter_out_old_news_api(news=search_results, hours_since=hrs_since_news)
             if not search_results:
-                logging.info(f"Found no news for Search Term: {search_term}")
+                logger.info(f"Found no news for Search Term: {search_term}")
                 search_term = random.choice(config["search_terms"])
-                logging.info(f"Try new Search Term: {search_term}")
+                logger.info(f"Try new Search Term: {search_term}")
         else:
             search_results = get_news(search_term=search_term)
 

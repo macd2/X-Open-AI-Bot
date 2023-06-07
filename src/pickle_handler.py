@@ -1,11 +1,10 @@
-import logging
 import pickle
 from os.path import exists, getmtime
 from datetime import datetime, timedelta
 
+from src.logger_handler import setup_logger
 
-
-logger = logging.getLogger()
+logger = setup_logger()
 
 def is_file_older_than(file, delta):
     cutoff = datetime.utcnow() - delta
@@ -26,7 +25,7 @@ def write_pickle(obj, filename, hashtag=None):
         pickle.dump(obj, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-def laod_pickle(filename, max_file_age_hrs=10):
+def load_pickle(filename, max_file_age_hrs=10):
     path = f'./storage/{filename}.pickle'
     if exists(path):
         if is_file_older_than(path, timedelta(hours=max_file_age_hrs)):

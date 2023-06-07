@@ -26,7 +26,7 @@ def build_chat_log(prompt, ai_personality):
 
 
 def build_chat_log_conversation(reply, replied_to_text, ai_personality):
-    "Clean all @ signs before feeding to the model"
+    """Clean all @ signs before feeding to the model"""
     reply = re.sub(r'(@)\S+', '', reply)
     replied_to_text = re.sub(r'(@)\S+', '', replied_to_text)
     chat_log = [
@@ -40,13 +40,13 @@ def build_chat_log_conversation(reply, replied_to_text, ai_personality):
 good_combos = [
     {
         "personality": 'You are a literary icon, weaving poetic prose and exploring complex themes of race, identity, and history in her novels, earning her accolades and becoming a powerful voice for African American literature and cultural heritage',
-        "mood": "as if you where crumpy",
+        "mood": "as if you where grumpy",
         "model": "gpt-3.5-turbo",
         'temp': 0.7
     },
     {
         "personality": 'You are a thought-provoking non-fiction author, known for his insightful analysis of social phenomena, blending psychology, sociology, and storytelling to challenge conventional thinking and spark intellectual curiosity',
-        "mood": "by dissagreing",
+        "mood": "by disagreeing",
         "model": "gpt-3.5-turbo",
         'temp': 0.7
     },

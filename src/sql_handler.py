@@ -28,8 +28,8 @@ def return_float(i):
     return float(i)
 
 
-def sql_get_n_latest_records(table_name, columne_name, n):
-    _ = db.execute(f"SELECT {str(columne_name)} FROM {str(table_name)} order by date desc LIMIT {n};").fetchall()
+def sql_get_n_latest_records(table_name, column_name, n):
+    _ = db.execute(f"SELECT {str(column_name)} FROM {str(table_name)} order by date desc LIMIT {n};").fetchall()
     return [i for i in _]
 
 
@@ -146,13 +146,13 @@ def sql_news_already_posted(hash_, url=None):
         return False
 
 
-def sql_mention_already_asnwered(tweet_id):
-    id = str(tweet_id)
+def sql_mention_already_answered(tweet_id):
+    id_ = str(tweet_id)
 
     if (
             db.execute(
                 "SELECT EXISTS(SELECT 1 FROM mentions WHERE in_reply_to_status_id='"
-                + id
+                + id_
                 + "' LIMIT 1)"
             ).fetchone()[0]
             > 0
@@ -260,7 +260,7 @@ def delete_duplicates():
 #         return False
 #
 #
-# def check_media_alredy_commented(db, media_id):
+# def check_media_already_commented(db, media_id):
 #     media_id = int(media_id)
 #     check = db.execute(f"SELECT type from replied_tweets WHERE media_id={media_id}").fetchall()
 #     if len(check) == 0:
@@ -553,18 +553,18 @@ def delete_duplicates():
 #                 os.remove(folder_to_clean + i)
 
 
-def sqlite3_backup(db, dbfile_path, backup_folder='data/backupdata/'):
+def sqlite3_backup(db_file_path, backup_folder='./storage'):
     """Create timestamped database copy"""
 
     if datetime.utcnow().hour % 8 == 0 and 0 < datetime.utcnow().minute <= 2:
         # db.execute('begin immediate')
 
         bk_time_stamp = str(datetime.utcnow().strftime("%Y_%m_%d_%H_%M"))
-        bk_path = dbfile_path.split('.')
+        bk_path = db_file_path.split('.')
         bk_path = bk_path[0] + '_' + bk_time_stamp + '.' + bk_path[1]
 
         # Make new backup file
-        shutil.copyfile(dbfile_path, backup_folder + bk_path)
+        shutil.copyfile(db_file_path, backup_folder + bk_path)
         print("\nCreating {}...".format(bk_path))
         # Unlock database
         # connection.rollback()

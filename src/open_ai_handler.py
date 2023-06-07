@@ -1,14 +1,14 @@
-import logging
 import random
 from time import sleep
 
 import openai
 from dotenv import dotenv_values
 
+from src.logger_handler import setup_logger
 from src.prompt_engineering import build_chat_log
 from src.sql_handler import sql_write_ai_params
 
-logger = logging.getLogger()
+logger = setup_logger()
 
 
 # chat = openai.Completion()
@@ -30,11 +30,11 @@ def gpt(model, chat_log, temp, n=1, max_tokens=52, presence_penalty=1):
 
     response = completion.create(model=model,
                                  messages=chat_log,
-                                 # max_tokens=52,
+                                 # max_tokens=max_tokens,
                                  temperature=temp,
                                  # between 0 and 2. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic
-                                 n=1,  # How many completions to generate for each prompt.
-                                 # presence_penalty = 1, # Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics.
+                                 n=n,  # How many completions to generate for each prompt.
+                                 # presence_penalty = presence_penalty, # Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics.
                                  )
     return response.choices[0]['message']['content']
 
@@ -48,7 +48,8 @@ def get_filter(filters, answer):
 
 def ask_gpt(prompt, ai_personality, temperature, model, chat_log=None, ability=""):
     # if a chat log is given we use the conversation mode based on the chat log
-    logger.info(f"Asking {model}")
+    logger.info("")
+    logger.info(f"Asking: {model}")
     if chat_log:
         # if we give a chat log we need to set the text of the prompt to the chat log directly
         # ToDo optimize this procedure
@@ -59,7 +60,7 @@ def ask_gpt(prompt, ai_personality, temperature, model, chat_log=None, ability="
     try:
         answer = gpt(model=model, chat_log=chat_log, temp=temperature, n=1, max_tokens=52, presence_penalty=1)
     except Exception as e:
-        logger.info("Got rate limited retry")
+        logger.info(f"Got Error: {e}")
         sleep(5)
         answer = gpt(model=model, chat_log=chat_log, temp=temperature, n=1, max_tokens=52, presence_penalty=1)
 
@@ -75,13 +76,11 @@ def ask_gpt(prompt, ai_personality, temperature, model, chat_log=None, ability="
         try:
             answer = gpt(model=model, chat_log=chat_log, temp=temperature, n=1, max_tokens=52, presence_penalty=1)
         except Exception as e:
-            logger.info("Got rate limited retry")
+            logger.info(f"Got Error {e}")
             sleep(5)
             answer = gpt(model=model, chat_log=chat_log, temp=temperature, n=1, max_tokens=52, presence_penalty=1)
         c += 1
         sleep(random.randrange(10,20))
-
-    # answer = tweak_gpt_outputs(gpt_response=answer)
 
     ai_params = {
         "ability": ability,
@@ -95,14 +94,4 @@ def ask_gpt(prompt, ai_personality, temperature, model, chat_log=None, ability="
     }
     sql_write_ai_params(ai_params=ai_params)
 
-    # logger.info("#############################################################################################")
-    # logger.info(f"Response: {answer}")
-    # logger.info(f"---> Personality: {ai_personality}")
-    # logger.info(f"---> Nuance: {prompt['nuance']}")
-    # logger.info(f"---> Mood: {prompt['mood']}")
-    # logger.info(f"Temperature: {temperature}")
-    # logger.info(f"Model: {model}")
-    # logger.info(f"Response Len: {len(answer)}")  # Twitter charackter limit 280
-    # logger.info("#############################################################################################")
-    # logger.info("")
     return answer

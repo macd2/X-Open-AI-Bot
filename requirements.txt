@@ -3,5 +3,6 @@ tweepy
 pandas
 python-dotenv
 duckduckgo_search
-tenacity
+# tenacity
 google-search-results
+python-telegram-bot==13.11

@@ -3,7 +3,7 @@
 *.db
 .idea
 
-
+/venv
 # User-specific stuff
 .idea/**/workspace.xml
 .idea/**/tasks.xml

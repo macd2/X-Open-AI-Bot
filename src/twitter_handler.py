@@ -1,4 +1,3 @@
-import logging
 import random
 import time
 from datetime import datetime, timedelta
@@ -8,9 +7,10 @@ from dotenv import dotenv_values
 
 from config import config
 from src.helper import df_from_tweepy_response, get_hash, filter_tweets_from_response
-from src.pickle_handler import laod_pickle, write_pickle
+from src.logger_handler import setup_logger
+from src.pickle_handler import load_pickle, write_pickle
 
-logger = logging.getLogger()
+logger = setup_logger()
 
 
 def create_api():
@@ -22,86 +22,86 @@ def create_api():
 
     auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
     auth.set_access_token(access_token, access_token_secret)
-    api = tweepy.API(auth, wait_on_rate_limit=True)
+    connector = tweepy.API(auth, wait_on_rate_limit=True)
 
     try:
-        api.verify_credentials()
+        connector.verify_credentials()
     except Exception as e:
         logger.error("Error creating API", exc_info=True)
         raise e
     logger.info("API created")
-    return api
+    return connector
 
 
-api = create_api()
+api_ = create_api()
 
 
 def fetch_tweet(ids: list):
     ids = [str(i) for i in ids]
-    return [x._json for x in api.lookup_statuses(ids)]
+    return [x._json for x in api_.lookup_statuses(ids)]
 
 
 def get_reply_to(mentions):
     in_reply_to_status_id = [x["in_reply_to_status_id_str"] for x in mentions]
-    tweets = api.lookup_statuses(in_reply_to_status_id)
+    tweets = api_.lookup_statuses(in_reply_to_status_id)
     return [x._json for x in tweets]
 
 
 def upload_image(image_path):
-    return api.media_upload(image_path)
+    return api_.media_upload(image_path)
 
 
 def like_tweet(tweet_id):
-    return api.create_favorite(tweet_id)
+    return api_.create_favorite(tweet_id)
 
 
 def post_a_tweet(tweet):
     error = 200
     status = None
     try:
-        status = api.update_status(status=str(tweet))
+        status = api_.update_status(status=str(tweet))
     except Exception as e:
         error = e
     return status, error
 
 
-def get_user_info(usernname):
-    return api.get_user(str(usernname))
+def get_user_info(username):
+    return api_.get_user(str(username))
 
 
 def get_following_by_user(username):
-    return api.create_friendship(username)
+    return api_.create_friendship(username)
 
 
-def get_follower_by_username(usernname):
-    user = get_user_info(usernname)
+def get_follower_by_username(username):
+    user = get_user_info(username)
     return user.followers()
 
 
 # function to perform data extraction
-def get_tweet_by_hashtag(hashtag, since_days, numtweet, return_df=False):
+def get_tweet_by_hashtag(hashtag, since_days, num_tweets, return_df=False):
     date_since = datetime.today() - timedelta(days=since_days)
     date_since = date_since.strftime('%Y-%m-%d')  # format yyyy-mm--dd
 
     # We are using .Cursor() to search
-    # through twitter for the required tweets.
+    # through Twitter for the required tweets.
     # The number of tweets can be
     # restricted using .items(number of tweets)
     try:
-        tweets = tweepy.Cursor(api.search_tweets,
+        tweets = tweepy.Cursor(api_.search_tweets,
                                hashtag,
                                lang="en",
                                since_id=date_since,
-                               tweet_mode='extended').items(numtweet)
+                               tweet_mode='extended').items(num_tweets)
     except Exception as e:
-        logger.error("Got error in twitter api", e)
+        logger.error("Got error in twitter api_", e)
         logger.info("Retry")
         time.sleep(10)
-        tweets = tweepy.Cursor(api.search_tweets,
+        tweets = tweepy.Cursor(api_.search_tweets,
                                hashtag,
                                lang="en",
                                since_id=date_since,
-                               tweet_mode='extended').items(numtweet)
+                               tweet_mode='extended').items(num_tweets)
 
     if return_df:
         return df_from_tweepy_response(returned_status=tweets)
@@ -109,41 +109,18 @@ def get_tweet_by_hashtag(hashtag, since_days, numtweet, return_df=False):
         return tweets
 
 
-#    filename = 'get_tweet_by_hastagd_tweets.csv'
-#    # we will save our database as a CSV file.
-#    db.to_csv(filename)
-
-# def get_filtered_tweets(hashtag, days_since, numtweet):
-#     df = get_tweet_by_hashtag(hashtag, days_since, numtweet)
-#     return filter_tweets(df)
-
-# def reply_to_tweet(tweet, ai_response, like=True, image_path=None):
-#     if like:
-#         like_tweet(tweet_id=tweet["id"])
-#     if image_path:
-#         media = upload_image(image_path)
-#         try:
-#             result = api.update_status(f'{ai_response}', in_reply_to_status_id=int(tweet["id"]),
-#                                        media_ids=[media.media_id], auto_populate_reply_metadata=True)
-#         except Exception as e:
-#             result = e
-#
-#     return api.update_status(f'{ai_response}', in_reply_to_status_id=int(tweet["id"]),
-#                              auto_populate_reply_metadata=True)
-
-
-def reply_to_tweet(tweet, ai_response, like=True, image_path=None):
+def reply_to_tweet(tweet, ai_response, like=True):
     if like:
         try:
             like_tweet(tweet_id=tweet["id"])
         except Exception as e:
-            pass
+            logger.error(e)
 
     error = 200
     status = None
     try:
-        status = api.update_status(f'{ai_response}', in_reply_to_status_id=int(tweet["id"]),
-                                   auto_populate_reply_metadata=True)
+        status = api_.update_status(f'{ai_response}', in_reply_to_status_id=int(tweet["id"]),
+                                    auto_populate_reply_metadata=True)
     except Exception as e:
         error = e
 
@@ -151,7 +128,7 @@ def reply_to_tweet(tweet, ai_response, like=True, image_path=None):
 
 
 def get_mentions(count=500):
-    tweets = tweepy.Cursor(api.mentions_timeline,
+    tweets = tweepy.Cursor(api_.mentions_timeline,
                            count=count,
                            tweet_mode='extended').items()
     # df = df_from_tweepy_response(returned_status=tweets)
@@ -167,27 +144,27 @@ def get_mentions(count=500):
     return a
 
 
-def get_tweets_and_filter(use_cahched_tweets, hashtag):
+def get_tweets_and_filter(use_cached_tweets, hashtag):
     cached_filtered_tweets_file_name = "filtered_tweets"
-    if use_cahched_tweets:
+    if use_cached_tweets:
         try:
-            filtered_tweets = laod_pickle(filename=cached_filtered_tweets_file_name, max_file_age_hrs=5)
+            filtered_tweets = load_pickle(filename=cached_filtered_tweets_file_name, max_file_age_hrs=5)
             hashtag = filtered_tweets[0]["hashtag"]
             if filtered_tweets:
                 return filtered_tweets, hashtag
         except Exception as e:
-            pass
+            logger.error(e)
 
     filtered_tweets = []
     # if no tweets found
     while not filtered_tweets:
         time.sleep(random.randrange(10, 20))
-        tweepy_response = get_tweet_by_hashtag(hashtag=hashtag, since_days=3, numtweet=500, return_df=False)
+        tweepy_response = get_tweet_by_hashtag(hashtag=hashtag, since_days=3, num_tweets=500, return_df=False)
         filtered_tweets = filter_tweets_from_response(tweepy_response, min_text_len=70)
         if not filtered_tweets:
-            logging.info(f"Found no Tweets for Hashtag: {hashtag}")
-            hashtag = random.choice(config["hastags"])
-            logging.info(f"Try new Hashtag: {hashtag}")
+            logger.info(f"Found no Tweets for Hashtag: {hashtag}")
+            hashtag = random.choice(config["hashtags"])
+            logger.info(f"Try new Hashtag: {hashtag}")
 
     write_pickle(obj=filtered_tweets, filename=cached_filtered_tweets_file_name, hashtag=hashtag)
 

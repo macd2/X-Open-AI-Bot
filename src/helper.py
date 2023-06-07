@@ -1,5 +1,4 @@
-import logging
-import re
+
 import datetime
 from calendar import month_abbr
 import hashlib
@@ -9,7 +8,9 @@ import math
 import re
 from collections import Counter
 
+from src.logger_handler import setup_logger
 
+logger = setup_logger()
 def get_cosine(vec1, vec2):
     intersection = set(vec1.keys()) & set(vec2.keys())
     numerator = sum([vec1[x] * vec2[x] for x in intersection])
@@ -25,13 +26,13 @@ def get_cosine(vec1, vec2):
 
 
 def text_to_vector(text):
-    WORD = re.compile(r"\w+")
-    words = WORD.findall(text)
+    word = re.compile(r"\w+")
+    words = word.findall(text)
     return Counter(words)
 
 
-def get_cosine_simalarity_score(text1, text2):
-    "A score higher than 0.5 indicates a high similarity"
+def get_cosine_similarity_score(text1, text2):
+    """A score higher than 0.5 indicates a high similarity"""
     return get_cosine(text_to_vector(text1), text_to_vector(text2))
 
 
@@ -78,13 +79,12 @@ def clean_tweet(tweet):
 
 
 def df_to_dict(df):
-    # drop na to avoide errors
+    # drop na to avoid errors
     df.dropna(inplace=True)
     # converting to dict
     return df.to_dict(orient='index')
 
 
-# TODO add the parameters to the function input idealy as a dict
 def filter_tweets(df):
     tweets_to_consider = []
     d = df_to_dict(df)
@@ -108,21 +108,11 @@ def filter_tweets(df):
 
     return tweets_to_consider
 
-
-# def get_simalarity_score(tweet, response):
-#     model = SentenceTransformer('distilbert-base-nli-mean-tokens')
-#
-#     sentences = [tweet, response]
-#     sentence_embeddings = model.encode(sentences)
-#     return util.pytorch_cos_sim(sentence_embeddings[0], sentence_embeddings[1])[0][
-#         0]  # as smaller the number as les similar. response < 0.85 themes to be a good thrashold
-
-
 def convert_sec(seconds):
     seconds = seconds % (24 * 3600)
     hour = seconds // 3600
     seconds %= 3600
-    minutes = seconds // 60
+    # minutes = seconds // 60
     seconds %= 60
     return hour
 
@@ -145,7 +135,7 @@ def convert_tweepy_created_date_to_datetime(created_at):
 def get_hash(text):
     text = str(text)
     h = hashlib.new('sha256')  # sha256 can be replaced with different algorithms
-    h.update(text.encode())  # give a encoded string.
+    h.update(text.encode())  # give an encoded string.
     return h.hexdigest()
 
 
@@ -204,21 +194,21 @@ def filter_tweets_from_response(returned_status, min_text_len=70):
 def df_from_tweepy_response(returned_status):
     # takes a twitter courser object
     # Creating DataFrame using pandas
-    db = pd.DataFrame(columns=['username',
-                               "user_id",
-                               'description',
-                               'location',
-                               'following',
-                               'followers',
-                               'ffratio',  # follers / following
-                               'frt_ratio',  # followers / totaltweets
-                               'totaltweets',
-                               'retweetcount',
-                               'text',
-                               'cleanedtext',
-                               'hashtags',
-                               'symbols',
-                               'id'])
+    # db = pd.DataFrame(columns=['username',
+    #                            "user_id",
+    #                            'description',
+    #                            'location',
+    #                            'following',
+    #                            'followers',
+    #                            'ffratio',  # followers / following
+    #                            'frt_ratio',  # followers / total-tweets
+    #                            'totaltweets',
+    #                            'retweetcount',
+    #                            'text',
+    #                            'cleanedtext',
+    #                            'hashtags',
+    #                            'symbols',
+    #                            'id'])
 
     list_tweets = [tweet for tweet in returned_status]
     a = [tweet._json for tweet in list_tweets]
@@ -296,12 +286,12 @@ def df_from_tweepy_response(returned_status):
 
 
 def unified_logger_output(model_response=None, personality=None, nuance=None, mood=None, temp=None, model=None):
-    logging.info(f"Model Response: {model_response}")
-    logging.info(f"Personality: {personality}")
-    logging.info(f"Nuance: {nuance}")
-    logging.info(f"Mood: {mood}")
-    logging.info(f"Temp: {temp}")
-    logging.info(f"Model: {model}")
+    logger.info(f"Model Response: {model_response}")
+    logger.info(f"Personality: {personality}")
+    logger.info(f"Nuance: {nuance}")
+    logger.info(f"Mood: {mood}")
+    logger.info(f"Temp: {temp}")
+    logger.info(f"Model: {model}")
     if model_response:
-        logging.info(f"Response Len: {len(model_response)}")
-    logging.info("-------------------------------")
+        logger.info(f"Response Len: {len(model_response)}")
+    logger.info("-------------------------------")

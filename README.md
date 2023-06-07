@@ -1,27 +1,28 @@
 # README #
 
-This README would normally document whatever steps are necessary to get your application up and running.
+This is an autonomous Twitter bot using Open Ai's GPT model. You can see a live version of the bot by following @_RussellEdwards on Twitter
+Use python 3.10 or higher. 
 
-### What is this repository for? ###
+### This Bot can: ###
 
-* Quick summary
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+* Reply to tweets based on hashtag search 
+* Post new tweets
+* respond to mentions 
 
 ### How do I get set up? ###
 
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
+* Rename .env.temp to .env
+* Fill in the information
+* If you don't have a  serpapi just leave it blank the bot will than try to use an alternative method to fetch news
+* If you don't have a telegram Token the bot will ignore this feature
+* open config.py and customize the way you want your bot to respond
+* open main.py and customize the functions you want  to perform
+* run python main.py
+
 
 ### Contribution guidelines ###
 
-* Writing tests
-* Code review
-* Other guidelines
+* This bot is in an early stage and contributions are welcome!
 
 ### Who do I talk to? ###
 
