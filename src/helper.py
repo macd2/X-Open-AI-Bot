@@ -156,6 +156,7 @@ def filter_tweets_from_response(returned_status, min_text_len=70):
     a = [tweet._json for tweet in list_tweets]
     for tweet in a:
         if len(tweet['full_text']) > min_text_len:
+
             tweet["symbols"] = [x for x in tweet["full_text"] if len(x) > 1 and "$" in x and not x[1].isdigit()]
             tweet['full_text_hash'] = get_hash(tweet["full_text"])
             try:
@@ -184,6 +185,7 @@ def filter_tweets_from_response(returned_status, min_text_len=70):
                 "tag" not in c.lower().split(" "),
                 "airdrop" not in c.lower().split(" "),
                 "giveaway" not in c.lower().split(" "),
+                "binary" not in c.lower().split(" ")
             ]
             if sum(_) == len(_):
                 tweets_to_consider.append(tweet)
