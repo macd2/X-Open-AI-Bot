@@ -34,21 +34,21 @@ def connect_to_local_db():
 #         return None
 
 
-def connect_to_db(remote=False, db_name=None, host=None, port=None, user_name=None, password=None):
-    # ToDo Fix the remote connector
-    if remote and db_name and host and port and password and user_name:
-        logger.info("Connect to Remote DB")
-        raise NotImplementedError
-        # return connect_to_remote_db(host, port, db_name, user_name, password)
-    else:
-        logger.info("Connect to local DB")
-        return connect_to_local_db()
+# def connect_to_db(remote=False, db_name=None, host=None, port=None, user_name=None, password=None):
+#     # ToDo Fix the remote connector
+#     if remote and db_name and host and port and password and user_name:
+#         logger.info("Connect to Remote DB")
+#         raise NotImplementedError
+#         # return connect_to_remote_db(host, port, db_name, user_name, password)
+#     else:
+#         logger.info("Connect to local DB")
+#         return connect_to_local_db()
+#
+#
+# db = connect_to_db(remote=False, db_name=env['sql_db_name'], host=env['sql_host'], port=env['sql_port'],
+#                    user_name=env['sql_user'], password=env['sql_pass'])
 
-
-db = connect_to_db(remote=False, db_name=env['sql_db_name'], host=env['sql_host'], port=env['sql_port'],
-                   user_name=env['sql_user'], password=env['sql_pass'])
-
-
+db = connect_to_local_db()
 def get_now():
     return datetime.now()
 
