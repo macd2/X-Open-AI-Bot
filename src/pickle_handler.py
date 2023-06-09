@@ -23,12 +23,12 @@ def is_file_older_than(file, delta):
 
 def write_pickle(obj, filename, hashtag=None):
     path = f'./storage/{filename}.pickle'
-    logger.info(f"Write pickle to {path}")
     if hashtag:
         for i in obj:
             i['hashtag'] = hashtag
     with open(path, 'wb') as handle:
         pickle.dump(obj, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        logger.info(f"Write pickle to {path}")
 
 
 def load_pickle(filename, max_file_age_hrs=10):

@@ -9,13 +9,13 @@ from src.prompt_engineering import build_chat_log
 from src.sql_handler import sql_write_ai_params
 
 
-
-
 # chat = openai.Completion()
 # image = openai.Image()
 
+
 def tweak_gpt_outputs(gpt_response):
-    keywords = ["respectfully ", "It is important to ", "Possible response:","I appreciate your response, but ", "@_RussellEdwards"]
+    keywords = ["respectfully ", "It is important to ", "Possible response:", "I appreciate your response, but ",
+                "@_RussellEdwards"]
     for i in keywords:
         if i.lower() in gpt_response.lower():
             logger.info(f"Replaced {i} in response")
@@ -60,19 +60,18 @@ def ask_gpt(prompt, ai_personality, temperature, model, chat_log=None, ability="
     try:
         answer = gpt(model=model, chat_log=chat_log, temp=temperature, n=1, max_tokens=52, presence_penalty=1)
     except Exception as e:
-        logger.info(f"Got Error: {e}")
+        logger.error(f"Got Error: {e}")
         sleep(5)
         answer = gpt(model=model, chat_log=chat_log, temp=temperature, n=1, max_tokens=52, presence_penalty=1)
 
     # Make sure the answer is according to these rules
     c = 0
     filters = ["I'm sorry,", "sorry", "humans", "human", "As an AI", "i cannot follow", "sorry, I cannot",
-              "let's try to"]
+               "let's try to", "I'm an AI", "can't physically", "I'm just a program"]
     while get_filter(filters=filters, answer=answer) or not answer or answer == "None":
-        logger.info("Model dont want to respond")
+        logger.info("Model using excuse get new response")
         logger.info(prompt)
         logger.info(f"{answer}")
-        logger.info("")
         try:
             answer = gpt(model=model, chat_log=chat_log, temp=temperature, n=1, max_tokens=52, presence_penalty=1)
         except Exception as e:
@@ -80,7 +79,7 @@ def ask_gpt(prompt, ai_personality, temperature, model, chat_log=None, ability="
             sleep(5)
             answer = gpt(model=model, chat_log=chat_log, temp=temperature, n=1, max_tokens=52, presence_penalty=1)
         c += 1
-        sleep(random.randrange(10,20))
+        sleep(random.randrange(10, 20))
 
     ai_params = {
         "ability": ability,

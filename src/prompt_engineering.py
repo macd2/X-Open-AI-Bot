@@ -1,22 +1,39 @@
 import re
 
-from src.helper import clean_links
 from config import config
+from src.helper import clean_links
 
 
 def build_twitter_prompt(mood, question, nuance):
-    prompt = " ".join([f"respond with a maximum of 275 characters to the text between the : signs :{clean_links(question)}: {mood} {nuance} and allways follow these rules:"] +
+    prompt = " ".join([
+                          f"respond with a maximum of 275 characters to the text between the * signs. *{clean_links(question)}* {mood} {nuance} and allways follow these rules:"] +
                       config["twitter_reply_rules"]
                       )
     return {"prompt": prompt, "mood": mood, "nuance": nuance}
+
+
+def build_twitter_promt_for_reply_mentions(mood, question, nuance):
+    prompt = " ".join([
+                          f"respond with a maximum of 275 characters to the text between the * signs. *{clean_links(question)}* {mood} {nuance} and allways follow these rules:"] +
+                      config["twitter_reply_rules"]
+                      )
+    return {"prompt": prompt, "mood": mood, "nuance": nuance}
+
 
 def build_twitter_prompt_for_news(mood, question, nuance):
-    prompt = " ".join([f"respond with a maximum of 250 characters to the text between the : signs :{clean_links(question)}: {mood} {nuance} and allways follow these rules:"] +
+    prompt = " ".join([
+                          f"respond with a maximum of 250 characters to the text between the : signs :{clean_links(question)}: {mood} {nuance} and allways follow these rules:"] +
                       config["twitter_reply_rules"]
                       )
     return {"prompt": prompt, "mood": mood, "nuance": nuance}
 
-def build_chat_log(prompt, ai_personality):
+
+def build_chat_log(prompt, ai_personality, replace_at_sings=False):
+    if replace_at_sings:
+        """Clean all @ signs before feeding to the model"""
+        prompt = re.sub(r'(@)\S+', '', prompt)
+        prompt = re.sub(r'\s+', ' ', prompt)
+
     chat_log = [
         {"role": "system", "content": ai_personality},
         {"role": "user", "content": prompt},
@@ -28,11 +45,14 @@ def build_chat_log(prompt, ai_personality):
 def build_chat_log_conversation(reply, replied_to_text, ai_personality):
     """Clean all @ signs before feeding to the model"""
     reply = re.sub(r'(@)\S+', '', reply)
+    reply = re.sub(r'\s+', ' ', reply)
     replied_to_text = re.sub(r'(@)\S+', '', replied_to_text)
+
     chat_log = [
         {"role": "system", "content": ai_personality},
         {"role": "assistant", "content": f"{replied_to_text}"},
-        {"role": "user", "content": f"respond to text after the : sign and don't use more than 275 characters: {reply}"}
+        {"role": "user",
+         "content": f"respond to text after the : sign and don't use more than 275 characters: {reply}"}
     ]
     return chat_log
 

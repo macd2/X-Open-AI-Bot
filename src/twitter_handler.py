@@ -6,11 +6,10 @@ import tweepy
 from dotenv import dotenv_values
 
 from config import config
-from src.helper import df_from_tweepy_response, get_hash, filter_tweets_from_response
 from src.communication_handler import logger
+from src.helper import df_from_tweepy_response, get_hash, filter_tweets_from_response
 from src.pickle_handler import load_pickle, write_pickle
-
-
+from src.sql_handler import sql_write_mentions_meta, sql_already_in_db
 
 
 def create_api():
@@ -29,7 +28,7 @@ def create_api():
     except Exception as e:
         logger.error("Error creating API", exc_info=True)
         raise e
-    logger.info("API created")
+    logger.info("Twitter API created")
     return connector
 
 
@@ -76,6 +75,15 @@ def get_following_by_user(username):
 def get_follower_by_username(username):
     user = get_user_info(username)
     return user.followers()
+
+
+def delete_tweet(tweet_id):
+    logger.info(f"Deleting tweet: {tweet_id}")
+    # Delete the duplicate tweets
+    try:
+        api_.destroy_status(tweet_id)
+    except tweepy.TweepyException as e:
+        logger.error(f"Could not fetch user_timeline: {e}")
 
 
 # function to perform data extraction
@@ -169,3 +177,55 @@ def get_tweets_and_filter(use_cached_tweets, hashtag):
     write_pickle(obj=filtered_tweets, filename=cached_filtered_tweets_file_name, hashtag=hashtag)
 
     return filtered_tweets, hashtag
+
+
+def check_if_replied_to_mention(tweet_id):
+    try:
+        tweets = api_.user_timeline(exclude_replies=False, tweet_mode='extended')
+        reply_tweet = [tweet for tweet in tweets if
+                       tweet.in_reply_to_status_id is not None and str(tweet.in_reply_to_status_id) == str(tweet_id)]
+        if reply_tweet:
+            return True
+    except tweepy.TweepyException as e:
+        logger.error(f"Error occurred while fetching tweets: {e}")
+        return False
+    return False
+
+
+def check_if_replied_to_mention_and_update_db(mentions, delete_multi_replies=True):
+    logger.info(f"Checking if already replied ")
+    try:
+        tweets = api_.user_timeline(exclude_replies=False, tweet_mode='extended')
+    except tweepy.TweepyException as e:
+        logger.error(f"Could not fetch user_timeline: {e}")
+        return
+
+    for mention in mentions:
+        status = 200
+        reply_tweet = [tweet for tweet in tweets if
+                       tweet.in_reply_to_status_id is not None and str(tweet.in_reply_to_status_id) == str(
+                           mention["id"])]
+        if len(reply_tweet) > 1:
+            logger.info(f"Replied more than once to same tweet id: {reply_tweet[0].in_reply_to_status_id}")
+            if delete_multi_replies:
+                for i in reply_tweet[:-1]:
+                    # when we are dealing with the Status object (in this case i is a Status object) we have to get values via status.key
+                    delete_tweet(i.id)
+                    time.sleep(random.randrange(1, 3))
+                    status = "deleted"
+
+        if reply_tweet:
+            for tweet in reply_tweet:
+                if not sql_already_in_db(table_name="mentions", columne="in_reply_to_text_hash",
+                                         value=mention['full_text_hash']):
+                    logger.info(f'Already Replayed to mention id: {mention["id"]} Updating DB')
+                    t = dict(in_reply_to_status_id=mention["id"],
+                             in_reply_to_text=mention['full_text'],
+                             in_reply_to_text_hash=mention['full_text_hash'],
+                             in_reply_to_user_name=mention["user"]["screen_name"],
+                             in_reply_to_user_id=mention["user"]["id"],
+                             replay_text=tweet.full_text,
+                             replay_tweet_id=tweet.id,
+                             status=str(status))
+                    sql_write_mentions_meta(mentions_data=t)
+

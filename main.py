@@ -34,12 +34,12 @@ def reply_mentions():
         time.sleep(random.randrange(10, 50))
         model = config["models"][0]
         temperature = random.choice(config["temps"])
-        ai_personality = "you are a funny guy always joking around and make humans laugh"
-        mood = random.choice(config["moods"])
+        ai_personality = "you are a funny guy always joking around and make others laugh"
+        mood = random.choice(config["moods_reply_mentions"])
         nuance = random.choice(config["nuances"])
         like = True
 
-        reply_to_mentions(like=like, mood=mood, nuance=nuance, ai_personality=ai_personality, temperature=temperature,                          model=model)
+        reply_to_mentions(like=like, mood=mood, nuance=nuance, ai_personality=ai_personality, temperature=temperature, model=model)
 
         sleep_time = random.randrange(4 * 60 * 60, 6 * 60 * 60)
         logger.info(f'Reply mentions complete sleeping for minutes: {int(sleep_time / 60)}')

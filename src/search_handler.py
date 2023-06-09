@@ -9,6 +9,7 @@ from config import config
 from src.helper import get_hash
 from src.communication_handler import logger
 from src.pickle_handler import load_pickle, write_pickle
+from typing import Tuple
 
 
 
@@ -68,24 +69,19 @@ def filter_out_old_news_api(news: list, hours_since: int):
             temp_list.append(x)
     return temp_list
 
-
-def return_news_list(search_term: str, use_cache: bool, use_api=True, hrs_since_news=8):
-    # ToDo Automate the use_api by checking of a value for the api_ was provided in the .env file
+def return_news_list(search_term: str, use_cache: bool, use_api=True, hrs_since_news=8) -> Tuple:
     search_result_file_name = "search_results"
 
-    search_results = None
+    # Try to load the cached version
     if use_cache:
         try:
             search_results = load_pickle(filename=search_result_file_name, max_file_age_hrs=10)
             search_term = search_results[0]["search_term"]
-            if search_results:
-                return search_results, search_term
+            return search_results, search_term
         except Exception as e:
             logger.info(f"News pickle couldn't be loaded: {e}")
-            search_results = None
 
-    # if no news found, or they are older than specified than get new set of news
-    while not search_results:
+    while True:
         sleep(random.randrange(10, 20))
         if use_api and env["serpapi"]:
             search_results = get_news_api(search_term=search_term)
@@ -98,7 +94,6 @@ def return_news_list(search_term: str, use_cache: bool, use_api=True, hrs_since_
         else:
             search_results = get_news(search_term=search_term)
 
-    # Cache the results to a file
-    write_pickle(obj=search_results, filename=search_result_file_name)
-
-    return search_results, search_term
+        if search_results:
+            write_pickle(obj=search_results, filename=search_result_file_name)
+            return search_results, search_term

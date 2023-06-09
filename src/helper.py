@@ -1,12 +1,11 @@
-
 import datetime
-from calendar import month_abbr
 import hashlib
-import pandas as pd
-
 import math
 import re
+from calendar import month_abbr
 from collections import Counter
+
+import pandas as pd
 
 from src.communication_handler import logger
 
@@ -108,6 +107,7 @@ def filter_tweets(df):
 
     return tweets_to_consider
 
+
 def convert_sec(seconds):
     seconds = seconds % (24 * 3600)
     hour = seconds // 3600
@@ -139,15 +139,28 @@ def get_hash(text):
     return h.hexdigest()
 
 
-def replace_hashtags(text: str):
+def replace_bad_hashtags(text: str):
+    hashtag_mappings = {
+        "#sarcasm": "#nooffense",
+        "#grumpy": "",
+        "#arrogant": "",
+        "#sarcastic": "",
+        "#motivation": ""
+    }
 
-    text = text.replace("#sarcasm", "#nooffense")
-    text = text.replace("#grumpy", "")
-    text = text.replace("#arrogant", "")
-    text = text.replace("#sarcastic", "")
-    text = text.replace("#motivation", "")
+    for bad_hashtag, replacement in hashtag_mappings.items():
+        text = text.replace(bad_hashtag, replacement)
 
     return text
+
+def remove_content_between_markers(text, start_marker, end_marker):
+    start_index = text.find(start_marker)
+    end_index = text.find(end_marker)
+
+    if start_index == -1 or end_index == -1:
+        return text
+
+    return text[:start_index] + text[end_index:]
 
 
 def filter_tweets_from_response(returned_status, min_text_len=70):
@@ -159,31 +172,32 @@ def filter_tweets_from_response(returned_status, min_text_len=70):
             tweet["symbols"] = [x for x in full_text if len(x) > 1 and "$" in x and not x[1].isdigit()]
             tweet['full_text_hash'] = get_hash(full_text)
 
-            ffratio = tweet["user"].get('followers_count', 0) / tweet["user"].get('friends_count', 1)
+            ffratio = tweet["user"].get('followers_count', 0) / max(tweet["user"].get('friends_count', 1), 1)
             tweet["ffratio"] = ffratio
 
-            frt_ratio = tweet["user"].get('followers_count', 0) / tweet["user"].get('statuses_count', 1)
+            frt_ratio = tweet["user"].get('followers_count', 0) / max(tweet["user"].get('statuses_count', 1), 1)
             tweet["frt_ratio"] = frt_ratio
 
             # Filter Tweets
             c = full_text.lower()
             if (
-                tweet["ffratio"] < 1.2 and
-                tweet["frt_ratio"] > 0.023 and
-                tweet["user"].get('statuses_count', 0) > 100 and
-                tweet["user"].get('followers_count', 0) > 100 and
-                tweet['retweet_count'] < 200 and
-                len(full_text) > min_text_len and
-                "rt" not in c.split(" ") and
-                "follow" not in c.split(" ") and
-                "tag" not in c.split(" ") and
-                "airdrop" not in c.split(" ") and
-                "giveaway" not in c.split(" ") and
-                "binary" not in c.split(" ")
+                    tweet["ffratio"] < 1.2 and
+                    tweet["frt_ratio"] > 0.023 and
+                    tweet["user"].get('statuses_count', 0) > 100 and
+                    tweet["user"].get('followers_count', 0) > 100 and
+                    tweet['retweet_count'] < 200 and
+                    len(full_text) > min_text_len and
+                    "rt" not in c.split(" ") and
+                    "follow" not in c.split(" ") and
+                    "tag" not in c.split(" ") and
+                    "airdrop" not in c.split(" ") and
+                    "giveaway" not in c.split(" ") and
+                    "binary" not in c.split(" ")
             ):
                 tweets_to_consider.append(tweet)
 
     return tweets_to_consider
+
 
 def df_from_tweepy_response(returned_status):
     # takes a twitter courser object
