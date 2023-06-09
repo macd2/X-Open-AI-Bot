@@ -1,10 +1,8 @@
-from src.communication_handler import logger
-
-
-
-from pathlib import Path
 import pickle
 from datetime import datetime, timedelta
+from pathlib import Path
+
+from src.communication_handler import logger
 
 
 class FileExpiredError(Exception):
@@ -23,16 +21,17 @@ def is_file_older_than(file, delta):
 
 def write_pickle(obj, filename, hashtag=None):
     path = f'./storage/{filename}.pickle'
+    logger.info(f"Write pickle to: {path}")
     if hashtag:
         for i in obj:
             i['hashtag'] = hashtag
     with open(path, 'wb') as handle:
         pickle.dump(obj, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        logger.info(f"Write pickle to {path}")
 
 
 def load_pickle(filename, max_file_age_hrs=10):
     path = f'./storage/{filename}.pickle'
+    logger.info(f"Loading pickle from: {path}")
     if Path(path).is_file():
         if is_file_older_than(path, timedelta(hours=max_file_age_hrs)):
             raise FileExpiredError("File is older than specified")

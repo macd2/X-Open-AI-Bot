@@ -1,17 +1,15 @@
 import random
 from time import sleep
+from typing import Tuple
 
 from dotenv import dotenv_values
 from duckduckgo_search import DDGS
-from serpapi import GoogleSearch
+from serpapi import GoogleSearch, serp_api_client_exception
 
 from config import config
-from src.helper import get_hash
 from src.communication_handler import logger
+from src.helper import get_hash
 from src.pickle_handler import load_pickle, write_pickle
-from typing import Tuple
-
-
 
 # source https://github.com/deedy5/duckduckgo_search
 # Load environment variables from .env file
@@ -35,27 +33,38 @@ def get_news(search_term="finance"):
 
 
 def get_news_api(search_term):
+    # params = {
+    #     "api_key": env["serpapi"],
+    #     "engine": "duckduckgo",
+    #     "q": f"{search_term}",
+    #     "tbm": "nws",
+    #     # "kl": "us-en",
+    #     "tbs": "qdr:d",
+    #     "num": 100
+    # }
     params = {
-        "api_key": env["serpapi"],
-        "engine": "duckduckgo",
         "q": f"{search_term}",
+        "google_domain": "google.com",
+        "api_key": f'{env["serpapi"]}',
         "tbm": "nws",
-        # "kl": "us-en",
         "tbs": "qdr:d",
-        "num": 100
     }
     try:
         search = GoogleSearch(params)
         results = search.get_dict()
+    except serp_api_client_exception as e:
+        logger.error(f"Fetching news not successful got: {e}")
+        return None
+    if results.get('search_metadata').get('status') == 'Success':
         for i in results['news_results']:
             i["body"] = i["snippet"]
             i["url"] = i["link"]
             i["body_hash"] = get_hash(i["body"])
             i["search_term"] = search_term
-    except Exception as e:
-        logger.info(f"Fetching news not successful got: {e}")
+        return results["news_results"]
+    else:
+        logger.info(f"Search was not successful status is: {results.get('search_metadata').get('status')}")
         return None
-    return results["news_results"]
 
 
 def filter_out_old_news_api(news: list, hours_since: int):
@@ -68,6 +77,7 @@ def filter_out_old_news_api(news: list, hours_since: int):
         if int(num[0]) <= hours_since and num[1] != "hours":
             temp_list.append(x)
     return temp_list
+
 
 def return_news_list(search_term: str, use_cache: bool, use_api=True, hrs_since_news=8) -> Tuple:
     search_result_file_name = "search_results"

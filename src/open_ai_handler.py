@@ -48,7 +48,6 @@ def get_filter(filters, answer):
 
 def ask_gpt(prompt, ai_personality, temperature, model, chat_log=None, ability=""):
     # if a chat log is given we use the conversation mode based on the chat log
-    logger.info("")
     logger.info(f"Asking: {model}")
     if chat_log:
         # if we give a chat log we need to set the text of the prompt to the chat log directly

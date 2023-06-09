@@ -5,8 +5,47 @@ from datetime import datetime
 
 from dotenv import dotenv_values
 
+from src.communication_handler import logger
+
 env = dotenv_values(".env")
-db = sqlite3.connect(f"./storage/{env['db_name']}.db", timeout=5, isolation_level=None)
+
+
+def connect_to_local_db():
+    conn = sqlite3.connect(f"./storage/{env['db_name']}.db", timeout=5, isolation_level=None)
+    return conn
+
+
+import psycopg2
+
+
+def connect_to_remote_db(host, port, database, username, password):
+    try:
+        conn = psycopg2.connect(
+            host=host,
+            port=port,
+            database=database,
+            user=username,
+            password=password,
+        )
+        # Return the connection object
+        return conn
+    except psycopg2.Error as e:
+        print(f"Error connecting to PostgreSQL: {e}")
+        return None
+
+
+def connect_to_db(remote=False, db_name=None, host=None, port=None, user_name=None, password=None):
+    # ToDo Fix the remote connector
+    if remote and db_name and host and port and password and user_name:
+        logger.info("Connect to Remote DB")
+        return connect_to_remote_db(host, port, db_name, user_name, password)
+    else:
+        logger.info("Connect to local DB")
+        return connect_to_local_db()
+
+
+db = connect_to_db(remote=False, db_name=env['sql_db_name'], host=env['sql_host'], port=env['sql_port'],
+                   user_name=env['sql_user'], password=env['sql_pass'])
 
 
 def get_now():
@@ -179,17 +218,20 @@ def delete_duplicates():
     query = 'select count(username_id) from usernames group by username_id having (count(username_id) > 1 );'
     db.execute(query)
 
+
 def sqlite3_backup(db_file_path, backup_folder='./storage'):
     current_time = datetime.utcnow()
 
     if current_time.minute <= 2 and current_time.hour % 8 == 0:
         bk_time_stamp = current_time.strftime("%Y_%m_%d_%H_%M")
-        bk_path = os.path.join(backup_folder, f"{os.path.splitext(db_file_path)[0]}_{bk_time_stamp}{os.path.splitext(db_file_path)[1]}")
+        bk_path = os.path.join(backup_folder,
+                               f"{os.path.splitext(db_file_path)[0]}_{bk_time_stamp}{os.path.splitext(db_file_path)[1]}")
 
         shutil.copyfile(db_file_path, bk_path)
         print(f"Creating {bk_path}...")
     else:
         print("No DB Backup Needed")
+
 
 def sync_databases(source_db, target_db, two_way_sync=True):
     # Establish connections to the source and target databases
@@ -244,4 +286,3 @@ def sync_databases(source_db, target_db, two_way_sync=True):
     # Close the connections
     conn_source.close()
     conn_target.close()
-
