@@ -1,4 +1,3 @@
-from src.logger_handler import setup_logger
 import random
 from time import sleep
 
@@ -8,11 +7,15 @@ from serpapi import GoogleSearch
 
 from config import config
 from src.helper import get_hash
+from src.communication_handler import logger
 from src.pickle_handler import load_pickle, write_pickle
 
-logger = setup_logger()
+
 
 # source https://github.com/deedy5/duckduckgo_search
+# Load environment variables from .env file
+env = dotenv_values(".env")
+
 
 def get_news(search_term="finance"):
     _ = []
@@ -31,7 +34,6 @@ def get_news(search_term="finance"):
 
 
 def get_news_api(search_term):
-    env = dotenv_values(".env")
     params = {
         "api_key": env["serpapi"],
         "engine": "duckduckgo",
@@ -67,8 +69,7 @@ def filter_out_old_news_api(news: list, hours_since: int):
     return temp_list
 
 
-def return_news_list(search_term, use_cache, use_api=True, hrs_since_news=8):
-    env = dotenv_values(".env")
+def return_news_list(search_term: str, use_cache: bool, use_api=True, hrs_since_news=8):
     # ToDo Automate the use_api by checking of a value for the api_ was provided in the .env file
     search_result_file_name = "search_results"
 
@@ -80,7 +81,8 @@ def return_news_list(search_term, use_cache, use_api=True, hrs_since_news=8):
             if search_results:
                 return search_results, search_term
         except Exception as e:
-            logger.info(f"News Not fetched got: {e}")
+            logger.info(f"News pickle couldn't be loaded: {e}")
+            search_results = None
 
     # if no news found, or they are older than specified than get new set of news
     while not search_results:

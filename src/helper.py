@@ -8,9 +8,9 @@ import math
 import re
 from collections import Counter
 
-from src.logger_handler import setup_logger
+from src.communication_handler import logger
 
-logger = setup_logger()
+
 def get_cosine(vec1, vec2):
     intersection = set(vec1.keys()) & set(vec2.keys())
     numerator = sum([vec1[x] * vec2[x] for x in intersection])
@@ -152,46 +152,38 @@ def replace_hashtags(text: str):
 
 def filter_tweets_from_response(returned_status, min_text_len=70):
     tweets_to_consider = []
-    list_tweets = [tweet for tweet in returned_status]
-    a = [tweet._json for tweet in list_tweets]
-    for tweet in a:
-        if len(tweet['full_text']) > min_text_len:
 
-            tweet["symbols"] = [x for x in tweet["full_text"] if len(x) > 1 and "$" in x and not x[1].isdigit()]
-            tweet['full_text_hash'] = get_hash(tweet["full_text"])
-            try:
-                ffratio = tweet["user"]['followers_count'] / tweet["user"]['friends_count']
-            except ZeroDivisionError:
-                ffratio = 0
+    for tweet in [tweet._json for tweet in returned_status]:
+        full_text = tweet['full_text']
+        if len(full_text) > min_text_len:
+            tweet["symbols"] = [x for x in full_text if len(x) > 1 and "$" in x and not x[1].isdigit()]
+            tweet['full_text_hash'] = get_hash(full_text)
 
+            ffratio = tweet["user"].get('followers_count', 0) / tweet["user"].get('friends_count', 1)
             tweet["ffratio"] = ffratio
-            try:
-                frt_ratio = tweet["user"]['followers_count'] / tweet["user"]['statuses_count']
-            except ZeroDivisionError:
-                frt_ratio = 0
+
+            frt_ratio = tweet["user"].get('followers_count', 0) / tweet["user"].get('statuses_count', 1)
             tweet["frt_ratio"] = frt_ratio
 
             # Filter Tweets
-            c = tweet['full_text']
-            _ = [
-                tweet["ffratio"] < 1.2,
-                tweet["frt_ratio"] > 0.023,
-                tweet["user"]['statuses_count'] > 100,
-                tweet["user"]['followers_count'] > 100,
-                tweet['retweet_count'] < 200,
-                len(c) > min_text_len,
-                "rt" not in c.lower().split(" "),
-                "follow" not in c.lower().split(" "),
-                "tag" not in c.lower().split(" "),
-                "airdrop" not in c.lower().split(" "),
-                "giveaway" not in c.lower().split(" "),
-                "binary" not in c.lower().split(" ")
-            ]
-            if sum(_) == len(_):
+            c = full_text.lower()
+            if (
+                tweet["ffratio"] < 1.2 and
+                tweet["frt_ratio"] > 0.023 and
+                tweet["user"].get('statuses_count', 0) > 100 and
+                tweet["user"].get('followers_count', 0) > 100 and
+                tweet['retweet_count'] < 200 and
+                len(full_text) > min_text_len and
+                "rt" not in c.split(" ") and
+                "follow" not in c.split(" ") and
+                "tag" not in c.split(" ") and
+                "airdrop" not in c.split(" ") and
+                "giveaway" not in c.split(" ") and
+                "binary" not in c.split(" ")
+            ):
                 tweets_to_consider.append(tweet)
 
     return tweets_to_consider
-
 
 def df_from_tweepy_response(returned_status):
     # takes a twitter courser object
@@ -288,12 +280,21 @@ def df_from_tweepy_response(returned_status):
 
 
 def unified_logger_output(model_response=None, personality=None, nuance=None, mood=None, temp=None, model=None):
-    logger.info(f"Model Response: {model_response}")
-    logger.info(f"Personality: {personality}")
-    logger.info(f"Nuance: {nuance}")
-    logger.info(f"Mood: {mood}")
-    logger.info(f"Temp: {temp}")
-    logger.info(f"Model: {model}")
+    log_message = ""
     if model_response:
-        logger.info(f"Response Len: {len(model_response)}")
-    logger.info("-------------------------------")
+        log_message += f"Model Response: {model_response}\n"
+        log_message += f"Response Len: {len(model_response)}\n"
+    if personality:
+        log_message += f"Personality: {personality}\n"
+    if nuance:
+        log_message += f"Nuance: {nuance}\n"
+    if mood:
+        log_message += f"Mood: {mood}\n"
+    if temp:
+        log_message += f"Temp: {temp}\n"
+    if model:
+        log_message += f"Model: {model}\n"
+
+    log_message += "-------------------------------"
+
+    logger.info(log_message)

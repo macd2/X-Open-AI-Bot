@@ -7,10 +7,10 @@ from dotenv import dotenv_values
 
 from config import config
 from src.helper import df_from_tweepy_response, get_hash, filter_tweets_from_response
-from src.logger_handler import setup_logger
+from src.communication_handler import logger
 from src.pickle_handler import load_pickle, write_pickle
 
-logger = setup_logger()
+
 
 
 def create_api():
@@ -55,11 +55,11 @@ def like_tweet(tweet_id):
     return api_.create_favorite(tweet_id)
 
 
-def post_a_tweet(tweet):
+def post_a_tweet(tweet: str):
     error = 200
     status = None
     try:
-        status = api_.update_status(status=str(tweet))
+        status = api_.update_status(status=tweet)
     except Exception as e:
         error = e
     return status, error

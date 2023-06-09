@@ -5,10 +5,9 @@ from time import sleep
 
 from config import config
 from src.abilities import reply_to_tweet_by_hashtag, post_news_tweet, reply_to_mentions
-from src.logger_handler import setup_logger
+from src.communication_handler import logger
 from src.sql_handler import init_db
 
-logger = setup_logger()
 init_db()
 
 # @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))

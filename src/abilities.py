@@ -4,7 +4,7 @@ from time import sleep
 
 from src.helper import get_hash, replace_hashtags, get_cosine_similarity_score, \
     unified_logger_output
-from src.logger_handler import setup_logger
+from src.communication_handler import logger
 from src.open_ai_handler import ask_gpt, tweak_gpt_outputs
 from src.prompt_engineering import build_twitter_prompt, build_chat_log_conversation, build_twitter_prompt_for_news
 from src.search_handler import return_news_list
@@ -13,7 +13,7 @@ from src.sql_handler import sql_check_text_already_replied, sql_write_replied_tw
     sql_write_mentions_meta, sql_news_already_posted, sql_write_timeline_posts, sql_get_n_latest_records
 from src.twitter_handler import reply_to_tweet, get_mentions, post_a_tweet, get_tweets_and_filter
 
-logger = setup_logger()
+
 
 
 def reply_to_tweet_by_hashtag(hashtag, like, mood, nuance, ai_personality, model, temperature=0.8,
@@ -181,40 +181,52 @@ def reply_to_mentions(like, mood, nuance, ai_personality, temperature, model):
 
 def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, model, use_cache=True):
     logger.info(f"Use Search term: {search_term}")
+
+    # Fetch news list using return_news_list function with caching enabled
     ddgs_news_gen, search_term = return_news_list(search_term=search_term, use_cache=True, use_api=True,
                                                   hrs_since_news=8)
 
+    # Check if the last news item is already in the database
     if use_cache and sql_news_already_posted(hash_=ddgs_news_gen[-1]["body_hash"], url=ddgs_news_gen[-1]["url"]):
-        # If the last element in the search results is already in the database this means we need to fetch new results
+        # If it is, fetch new results without using the cache
         ddgs_news_gen, search_term = return_news_list(search_term=search_term, use_cache=False, use_api=True,
                                                       hrs_since_news=8)
 
-    # make sure to post different content
-    # there for we check for similarity in the posts
+    # Fetch the last ten posts from the database
     last_ten_posts = [x[0] for x in sql_get_n_latest_records(table_name='timeline_posts', column_name="body", n=10)]
 
     result_list = []
     while not result_list:
+        # Iterate over each news item in ddgs_news_gen
         for v in ddgs_news_gen:
             sublist = []
             for i in last_ten_posts:
+                # Calculate the cosine similarity score between the news item and each of the last ten posts
                 score = get_cosine_similarity_score(text1=v["body"], text2=i)
+
+                # Check if the score is above 0.45
                 if score > 0.45:
                     sublist.append(False)
                 else:
                     sublist.append(True)
+
+            # Check if all values in sublist are True
             if all(sublist):
                 result_list.append(v)
+
         if not result_list:
+            # Fetch new results without using the cache
             ddgs_news_gen, search_term = return_news_list(search_term=search_term, use_cache=False, use_api=True,
                                                           hrs_since_news=8)
         else:
             ddgs_news_gen = result_list
 
     if type(ddgs_news_gen) == list:
+        # Iterate over each news item in ddgs_news_gen
         for v in ddgs_news_gen:
             body = v["body"]
 
+            # Check if the news item is already posted in the database
             if sql_news_already_posted(get_hash(body), url=v["url"]):
                 logger.info("No action news already posted")
                 continue
@@ -222,19 +234,24 @@ def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, mode
             logger.info("")
             logger.info('News: ' + body)
 
+            # Build a prompt for generating a Twitter post based on the news
             prompt = build_twitter_prompt_for_news(question=body, mood=mood, nuance=nuance)
+
+            # Generate a response from GPT
             response = ask_gpt(prompt=prompt, ai_personality=ai_personality, temperature=temperature, model=model,
                                ability="post_news_tweet")
 
             while len(response) > 250:
-                logger.info(f"Response to long regenerating Len: {len(response)}")
+                logger.info(f"Response too long. Regenerating. Len: {len(response)}")
+
+                # Generate a new response from GPT
                 response = ask_gpt(prompt=prompt, ai_personality=ai_personality, temperature=temperature, model=model,
                                    ability="post_news_tweet")
+
                 time.sleep(random.randrange(1, 5))
 
             response = replace_hashtags(response)
-            # Add the original url of the news
-            tweet = f"{response} {v['url']}"
+            tweet = f"{response} {v['url']}"  # Combine the generated response with the news URL
 
             unified_logger_output(model_response=response, personality=ai_personality, nuance=nuance, mood=mood,
                                   temp=temperature, model=model)
@@ -243,7 +260,7 @@ def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, mode
             status, error = post_a_tweet(tweet)
 
             if error != 200:
-                logger.info(f"Sending not successful got: {error}")
+                logger.info(f"Sending not successful. Got: {error}")
                 post_data = {
                     "search_term": search_term,
                     "body": body,

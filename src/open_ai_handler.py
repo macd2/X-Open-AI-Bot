@@ -4,11 +4,11 @@ from time import sleep
 import openai
 from dotenv import dotenv_values
 
-from src.logger_handler import setup_logger
+from src.communication_handler import logger
 from src.prompt_engineering import build_chat_log
 from src.sql_handler import sql_write_ai_params
 
-logger = setup_logger()
+
 
 
 # chat = openai.Completion()
