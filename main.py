@@ -24,13 +24,14 @@ def reply_tweet():
 
         reply_to_tweet_by_hashtag(hashtag=hashtag, like=like, mood=mood, nuance=nuance, model=model, ai_personality=ai_personality, temperature=temperature, use_cached_tweets=True, n_posts =5)
 
-        sleep_time = random.randrange(1 * 60 * 60, 5 * 60 * 60)  # between 4 and 6 hours
+        sleep_time = random.randrange(1 * 60 * 60, 3 * 60 * 60)  # between 4 and 6 hours
         logger.info(f"Reply to tweets complete sleeping for minutes: {int(sleep_time / 60)}")
         sleep(sleep_time)
 
 
 def reply_mentions():
     while True:
+        # Don't start all functions at once
         time.sleep(random.randrange(10, 50))
         model = config["models"][0]
         temperature = random.choice(config["temps"])
@@ -41,7 +42,7 @@ def reply_mentions():
 
         reply_to_mentions(like=like, mood=mood, nuance=nuance, ai_personality=ai_personality, temperature=temperature, model=model)
 
-        sleep_time = random.randrange(4 * 60 * 60, 6 * 60 * 60)
+        sleep_time = random.randrange(1 * 60 * 60, 1 * 60 * 60)
         logger.info(f'Reply mentions complete sleeping for minutes: {int(sleep_time / 60)}')
         sleep(sleep_time)
 
