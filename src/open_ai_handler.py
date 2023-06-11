@@ -1,4 +1,5 @@
 import random
+import unicodedata
 from time import sleep
 
 import openai
@@ -52,9 +53,9 @@ def ask_gpt(prompt, ai_personality, temperature, model, chat_log=None, ability="
     if chat_log:
         # if we give a chat log we need to set the text of the prompt to the chat log directly
         # ToDo optimize this procedure
-        prompt["prompt"] = chat_log[-1]["content"]
+        prompt["prompt"] = unicodedata.normalize("NFKD", chat_log[-1]["content"])
     else:
-        chat_log = build_chat_log(prompt=prompt["prompt"], ai_personality=ai_personality)
+        chat_log = build_chat_log(prompt=unicodedata.normalize("NFKD", prompt["prompt"]), ai_personality=ai_personality)
 
     try:
         answer = gpt(model=model, chat_log=chat_log, temp=temperature, n=1, max_tokens=52, presence_penalty=1)

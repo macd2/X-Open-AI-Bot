@@ -5,8 +5,6 @@ from datetime import datetime
 
 from dotenv import dotenv_values
 
-from src.communication_handler import logger
-
 env = dotenv_values(".env")
 
 
@@ -49,6 +47,8 @@ def connect_to_local_db():
 #                    user_name=env['sql_user'], password=env['sql_pass'])
 
 db = connect_to_local_db()
+
+
 def get_now():
     return datetime.now()
 
@@ -88,7 +88,8 @@ def init_db(tables=None):
              "fields": ["question", "prompt", "response", "personality", "nuance", "mood", "model", "temperature",
                         "ability"]},
             {"name": "timeline_posts",
-             "fields": ["search_term", "body", "body_hash", "input_text_url", "output_text", "post_tweet_id", "status"]}
+             "fields": ["search_term", "news_date","body", "body_hash", "description_hash", "input_text_url", "output_text",
+                        "post_tweet_id", "status"]}
         ]
     for table in tables:
         db.execute(f"CREATE TABLE IF NOT EXISTS {table['name']} (date TEXT)")

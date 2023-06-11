@@ -7,9 +7,9 @@ from src.communication_handler import logger
 from src.helper import get_hash, replace_bad_hashtags, get_cosine_similarity_score, \
     unified_logger_output, clean_links, remove_content_between_markers
 from src.open_ai_handler import ask_gpt, tweak_gpt_outputs
-from src.prompt_engineering import build_twitter_prompt, build_twitter_prompt_for_news, \
+from src.prompt_engineering import build_twitter_prompt, build_twitter_prompt_news, \
     build_chat_log, build_twitter_promt_for_reply_mentions
-from src.search_handler import return_news_list
+from src.search_handler import return_news_list, returns_news_list_news_api
 from src.sql_handler import sql_check_text_already_replied, sql_write_replied_tweet_meta, \
     sql_mention_already_answered, \
     sql_write_mentions_meta, sql_news_already_posted, sql_write_timeline_posts, sql_get_n_latest_records
@@ -99,6 +99,7 @@ def reply_to_mentions(like, mood, nuance, ai_personality, temperature, model):
         # Check if the mention has already been answered in the database
         if sql_mention_already_answered(tweet['id']):
             logger.info(f"No action! Already replied to Mention: {tweet['id']}\n")
+            cc += 1
             continue
         # Make sure the reply contains text
         no_links = clean_links(tweet['full_text'])
@@ -156,31 +157,43 @@ def reply_to_mentions(like, mood, nuance, ai_personality, temperature, model):
         sleep(sleep_time)
 
 
-def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, model, use_cache=True):
+def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, model, use_cache=True, randomize=True):
     logger.info(f"Use Search term: {search_term}")
 
-    ddgs_news_gen, search_term = return_news_list(search_term=search_term, use_cache=use_cache, use_api=True,
-                                                  hrs_since_news=8)
+    news_api_news, search_term = returns_news_list_news_api(search_term=search_term, use_cache=use_cache, use_api=True,
+                                                            hrs_since_news=8)
+    if not news_api_news:
+        # This only happens when the api limit is reached
+        return
     last_ten_posts = [x[0] for x in sql_get_n_latest_records(table_name='timeline_posts', column_name="body", n=10)]
 
-    result_list = [v for v in ddgs_news_gen if
+    result_list = [v for v in news_api_news if
                    all(get_cosine_similarity_score(text1=v["body"], text2=i) <= 0.45 for i in last_ten_posts)]
+
+    if not result_list:
+        news_api_news, search_term = return_news_list(search_term=search_term, use_cache=False, use_api=True,
+                                                      hrs_since_news=8)
+        result_list = [v for v in news_api_news if
+                       all(get_cosine_similarity_score(text1=v["body"], text2=i) <= 0.45 for i in last_ten_posts)]
 
     if result_list:
         for v in result_list:
+            if randomize:
+                v = random.choice(result_list)
+
             body = v["body"]
 
-            if sql_news_already_posted(get_hash(body), url=v["url"]):
+            if sql_news_already_posted(get_hash(v["description"]), url=v["url"]):
                 logger.info("No action news already posted")
                 continue
 
             logger.info('News: ' + body)
 
-            prompt = build_twitter_prompt_for_news(question=body, mood=mood, nuance=nuance)
+            prompt = build_twitter_prompt_news(question=body, mood=mood, nuance=nuance)
             response = ask_gpt(prompt=prompt, ai_personality=ai_personality, temperature=temperature, model=model,
                                ability="post_news_tweet")
 
-            while len(response) > 250:
+            while len(response) > 260:
                 logger.info(f"Response too long. Regenerating. Len: {len(response)}")
                 response = ask_gpt(prompt=prompt, ai_personality=ai_personality, temperature=temperature, model=model,
                                    ability="post_news_tweet")
@@ -204,7 +217,8 @@ def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, mode
             post_data = {
                 "search_term": search_term,
                 "body": body,
-                "body_hash": v["body_hash"],
+                "news_date": v["publishedAt"],
+                "description_hash": v["description_hash"],
                 "input_text_url": v['url'],
                 "output_text": response,
                 "post_tweet_id": None if error != 200 else status.id,
@@ -212,3 +226,69 @@ def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, mode
             }
             sql_write_timeline_posts(post_data=post_data)
             break
+#
+# def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, model, use_cache=True):
+#     logger.info(f"Use Search term: {search_term}")
+#
+#     ddgs_news_gen, search_term = return_news_list(search_term=search_term, use_cache=use_cache, use_api=True,
+#                                                   hrs_since_news=8)
+#     if not ddgs_news_gen:
+#         # This only happens when the api limit is reached
+#         return
+#     last_ten_posts = [x[0] for x in sql_get_n_latest_records(table_name='timeline_posts', column_name="body", n=10)]
+#
+#     result_list = [v for v in ddgs_news_gen if
+#                    all(get_cosine_similarity_score(text1=v["body"], text2=i) <= 0.45 for i in last_ten_posts)]
+#
+#     if not result_list:
+#         ddgs_news_gen, search_term = return_news_list(search_term=search_term, use_cache=False, use_api=True,
+#                                                   hrs_since_news=8)
+#         result_list = [v for v in ddgs_news_gen if
+#                    all(get_cosine_similarity_score(text1=v["body"], text2=i) <= 0.45 for i in last_ten_posts)]
+#
+#     if result_list:
+#         for v in result_list:
+#             body = v["body"]
+#
+#             if sql_news_already_posted(get_hash(body), url=v["url"]):
+#                 logger.info("No action news already posted")
+#                 continue
+#
+#             logger.info('News: ' + body)
+#
+#             prompt = build_twitter_prompt_news(question=body, mood=mood, nuance=nuance)
+#             response = ask_gpt(prompt=prompt, ai_personality=ai_personality, temperature=temperature, model=model,
+#                                ability="post_news_tweet")
+#
+#             while len(response) > 250:
+#                 logger.info(f"Response too long. Regenerating. Len: {len(response)}")
+#                 response = ask_gpt(prompt=prompt, ai_personality=ai_personality, temperature=temperature, model=model,
+#                                    ability="post_news_tweet")
+#                 time.sleep(random.randrange(1, 5))
+#
+#             response = replace_bad_hashtags(response)
+#             tweet = f"{response} {v['url']}"
+#
+#             unified_logger_output(model_response=response, personality=ai_personality, nuance=nuance, mood=mood,
+#                                   temp=temperature, model=model)
+#
+#             logger.info("Sending Post...")
+#             status, error = post_a_tweet(tweet)
+#
+#             if error != 200:
+#                 logger.error(f"Sending not successful. Got: {error}")
+#             else:
+#                 logger.info(f"In response to: {body}")
+#                 logger.info(f"Tweet: {tweet}")
+#
+#             post_data = {
+#                 "search_term": search_term,
+#                 "body": body,
+#                 "body_hash": v["body_hash"],
+#                 "input_text_url": v['url'],
+#                 "output_text": response,
+#                 "post_tweet_id": None if error != 200 else status.id,
+#                 "status": str(error)
+#             }
+#             sql_write_timeline_posts(post_data=post_data)
+#             break

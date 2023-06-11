@@ -7,7 +7,7 @@ from dotenv import dotenv_values
 
 from config import config
 from src.communication_handler import logger
-from src.helper import df_from_tweepy_response, get_hash, filter_tweets_from_response
+from src.helper import df_from_tweepy_response, get_hash, filter_tweets_from_response, clean_links
 from src.pickle_handler import load_pickle, write_pickle
 from src.sql_handler import sql_write_mentions_meta, sql_already_in_db
 
@@ -86,8 +86,13 @@ def delete_tweet(tweet_id):
         logger.error(f"Could not fetch user_timeline: {e}")
 
 
+# def get_liked_tweets():
+#     tweets = api_.get_favorites(id=id, tweet_fields=['context_annotations', 'created_at', 'geo'])
+#
+#     for tweet in tweets.data:
+#         print(tweet)
 # function to perform data extraction
-def get_tweet_by_hashtag(hashtag, since_days, num_tweets, return_df=False):
+def get_tweet_by_hashtag(hashtag: str, since_days, num_tweets, return_df=False):
     date_since = datetime.today() - timedelta(days=since_days)
     date_since = date_since.strftime('%Y-%m-%d')  # format yyyy-mm--dd
 
@@ -95,9 +100,10 @@ def get_tweet_by_hashtag(hashtag, since_days, num_tweets, return_df=False):
     # through Twitter for the required tweets.
     # The number of tweets can be
     # restricted using .items(number of tweets)
+    hashtag = hashtag.replace("#", "")
     try:
         tweets = tweepy.Cursor(api_.search_tweets,
-                               hashtag,
+                               f"(#{hashtag}) (-is:retweet -is:reply)",
                                lang="en",
                                since_id=date_since,
                                tweet_mode='extended').items(num_tweets)
@@ -229,3 +235,43 @@ def check_if_replied_to_mention_and_update_db(mentions, delete_multi_replies=Tru
                              status=str(status))
                     sql_write_mentions_meta(mentions_data=t)
 
+
+class MyStreamingClient(tweepy.StreamingClient):
+    def on_status(self, status):
+        print("received tweet!")
+
+    def on_tweet(self, tweet):
+        if len(clean_links(tweet.text)) > 10:
+            print(tweet)
+            print("------------------")
+        else:
+            print("Tweet is short")
+
+    def on_includes(self, includes):
+        # print(includes)
+        pass
+
+    def on_error(self, status_code):
+        print(status_code)
+        if status_code == 420:
+            return False
+
+
+# env = dotenv_values(".env")
+# bearer_token = env["bearer_token"]
+#
+#
+# # # @_RussellEdwards
+# def delete_all_rules():
+#     a = stream.get_rules().data
+#     for i in a:
+#         stream.delete_rules(i.id)
+#
+#
+# stream = MyStreamingClient(bearer_token=bearer_token)
+# delete_all_rules()
+#
+# stream.add_rules(tweepy.StreamRule(value="(#trump) (-is:retweet -is:reply)"), dry_run=False)
+#
+# print("active rules are", stream.get_rules().data)
+# stream.filter(expansions=["author_id", "referenced_tweets.id", "in_reply_to_user_id", "entities.mentions.username"])

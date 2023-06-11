@@ -6,3 +6,4 @@ duckduckgo_search
 # tenacity
 google-search-results
 python-telegram-bot==13.11
+newsapi-python
