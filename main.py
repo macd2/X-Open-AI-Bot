@@ -63,16 +63,14 @@ def post_news():
         logger.info(f"Post new tweets complete sleeping for minutes: {int(sleep_time / 60)}")
         sleep(sleep_time)
 
-#
-# if __name__ == "__main__":
-#     p1 = Process(target=post_news)
-#     p1.start()
-#     p2 = Process(target=reply_mentions)
-#     p2.start()
-#     p3 = Process(target=reply_tweet)
-#     p3.start()
-#     p1.join()
-#     p2.join()
-#     p3.join()
-#
-post_news()
+
+if __name__ == "__main__":
+    p1 = Process(target=post_news)
+    p1.start()
+    p2 = Process(target=reply_mentions)
+    p2.start()
+    p3 = Process(target=reply_tweet)
+    p3.start()
+    p1.join()
+    p2.join()
+    p3.join()
