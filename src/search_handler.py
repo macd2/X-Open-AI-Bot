@@ -10,6 +10,9 @@ from config import config
 from src.communication_handler import logger
 from src.helper import get_hash
 from src.pickle_handler import load_pickle, write_pickle
+from newsapi import NewsApiClient
+from datetime import datetime, timedelta
+
 
 # source https://github.com/deedy5/duckduckgo_search
 # Load environment variables from .env file
@@ -86,9 +89,6 @@ def get_news_api(search_term):
 
 
 # Get News via News API (https://newsapi.org/)
-from newsapi import NewsApiClient
-
-
 def write_description_hash(response_):
     if response_["status"] == 'ok':
         if int(response_["totalResults"]) == 0:
@@ -117,20 +117,16 @@ def write_body_text(response_):
 
 
 newsapi = NewsApiClient(api_key=env['news_api_key'])
-
-from datetime import datetime, timedelta
-
-
 def get_news_news_api(search_term, type_: str):
     if type_ == "top_headlines":
         # /v2/top-headlines
         category = random.choice(['business',
-                           'entertainment',
-                           'general',
-                           # 'health',
-                           'science',
-                           # 'sports',
-                           'technology'])
+                                  'entertainment',
+                                  'general',
+                                  # 'health',
+                                  'science',
+                                  # 'sports',
+                                  'technology'])
         logger.info(f"Using search term: {search_term} and category: {category}")
         top_headlines = newsapi.get_top_headlines(q=search_term,  # 'bitcoin',
                                                   category=category,
