@@ -43,7 +43,7 @@ def reply_to_tweet_by_hashtag(hashtag, like, mood, nuance, ai_personality, model
 
         # Post the reply
         while len(response) > 280:
-            logger.info("Answer too long, regenerate")
+            logger.info(f"reply_to_tweet_by_hashtag: Answer too long, regenerate Len: {len(response)}")
             response = ask_gpt(prompt=prompt, ai_personality=ai_personality, temperature=temperature, model=model,
                                ability="reply_to_tweet_by_hashtag")
             time.sleep(2)
@@ -118,7 +118,7 @@ def reply_to_mentions(like, mood, nuance, ai_personality, temperature, model):
                                model=model, ability="reply_to_mentions")
             # Make sure the response length is within Twitter's limit
             while len(response) > 280:
-                logger.info(f"Response too long! Regenerating Len: {len(response)}")
+                logger.info(f"Reply to mention: Response too long! Regenerating Len: {len(response)}")
                 response = ask_gpt(chat_log=chat_log, prompt=prompt, ai_personality=ai_personality,
                                    temperature=temperature,
                                    model=model, ability="reply_to_mentions")
