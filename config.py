@@ -115,7 +115,7 @@ config = dict(
         "and be engaging"
     ],
     twitter_reply_rules=[
-        "1. don't use more than 275 characters to answer",
+        "1. Use a MAXIMUM of 275 characters to answer!",
         "2. Never repeat the input",
         "3. Never repeat a the question",
         "4. Never repeat a yourself or the the text im giving you",
