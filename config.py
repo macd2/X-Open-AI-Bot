@@ -35,15 +35,15 @@ config = dict(
         "happybirthday",
         'influncer',
 
-         'sports',
-         'travel',
-         'photography',
-         'tbt',
-         'MondayMotivation',
-         'fitness',
-         'food',
-         'blessed',
-         'art',
+        'sports',
+        'travel',
+        'photography',
+        'tbt',
+        'MondayMotivation',
+        'fitness',
+        'food',
+        'blessed',
+        'art',
 
     ],
     search_terms=['Investing',
@@ -115,7 +115,7 @@ config = dict(
         "and be engaging"
     ],
     twitter_reply_rules=[
-        "1. Use a MAXIMUM of 275 characters to answer!",
+        "1. Use a MAXIMUM of 275 characters!",  # redefined in the prompt_engineering.py
         "2. Never repeat the input",
         "3. Never repeat a the question",
         "4. Never repeat a yourself or the the text im giving you",

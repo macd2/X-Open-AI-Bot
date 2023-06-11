@@ -6,18 +6,24 @@ from src.helper import clean_links
 
 
 def build_twitter_prompt(mood, question, nuance):
-    prompt = " ".join([
-                          f"respond with a maximum of 275 characters to the text between the * signs. *{clean_links(question)}* {mood} {nuance} and allways follow these rules:"] +
-                      config["twitter_reply_rules"]
-                      )
+    question = unicodedata.normalize("NFKD", question)
+    prompt = " ".join(
+        [
+            f"respond to the text between the * signs *{clean_links(question)}* {mood} {nuance} and allways follow these rules:"]
+        + ["1. Use a MAXIMUM of 275 characters to answer!"]
+        + config["twitter_reply_rules"][1:]
+    )
     return {"prompt": prompt, "mood": mood, "nuance": nuance}
 
 
 def build_twitter_promt_for_reply_mentions(mood, question, nuance):
-    prompt = " ".join([
-                          f"respond with a maximum of 275 characters to the text between the * signs. *{clean_links(question)}* {mood} {nuance} and allways follow these rules:"] +
-                      config["twitter_reply_rules"]
-                      )
+    question = unicodedata.normalize("NFKD", question)
+    prompt = " ".join(
+        [
+            f"respond to the text between the * signs *{clean_links(question)}* {mood} {nuance} and allways follow these rules:"]
+        + ["1. Use a MAXIMUM of 275 characters to answer!"]
+        + config["twitter_reply_rules"][1:]
+    )
     return {"prompt": prompt, "mood": mood, "nuance": nuance}
 
 

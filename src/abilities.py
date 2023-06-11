@@ -31,6 +31,7 @@ def reply_to_tweet_by_hashtag(hashtag, like, mood, nuance, ai_personality, model
     logger.info("")
     c = 0
     for tweet in filtered_tweets:
+        logger.info(f"Reply to Tweet by Hashtag {c}/{n_posts}")
         if sql_check_text_already_replied(tweet["full_text_hash"]):
             continue
 
