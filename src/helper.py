@@ -148,13 +148,25 @@ def replace_bad_hashtags(text: str):
         "#sarcastic": "",
         "#motivation": "",
         "#skepticism": "",
+        "#toxicmasculinity":"",
+        "skeptical":"",
+        "sceptical": "",
+        "patience":"",
+        "@_RussellEdwards":""
     }
 
     for bad_hashtag, replacement in hashtag_mappings.items():
-        text = text.replace(bad_hashtag, replacement)
-
+        text= text.lower().replace(bad_hashtag.lower(), replacement)
     return text
 
+def replace_longest_hashtag(string, replacement=""):
+    hashtag_words = [word for word in string.replace("#", " #").split() if word.startswith('#')]
+    if not hashtag_words:
+        return string
+
+    longest_word = max(hashtag_words, key=len)
+    replaced_string = string.replace(longest_word, replacement)
+    return " ".join(replaced_string.split())
 def remove_content_between_markers(text, start_marker, end_marker):
     start_index = text.find(start_marker)
     end_index = text.find(end_marker)
@@ -321,9 +333,7 @@ def unified_logger_output(model_response=None, personality=None, nuance=None, mo
 
     logger.info(log_message)
 
-def whoami():
-    frame = inspect.currentframe()
-    return inspect.getframeinfo(frame).function
+
 import sys
 def callersname():
     return f"{sys._getframe(2).f_code.co_name}".upper()
