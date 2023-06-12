@@ -7,16 +7,16 @@ from time import sleep
 import config
 from src.communication_handler import logger
 from src.helper import get_hash, replace_bad_hashtags, get_cosine_similarity_score, \
-    unified_logger_output, clean_links, remove_content_between_markers, callersname
-from src.open_ai_handler import ask_gpt, tweak_gpt_outputs
-from src.prompt_engineering import build_twitter_prompt, build_twitter_prompt_news, \
-    build_chat_log, build_twitter_promt_for_reply_mentions, gpt_build_chat_log_conversation
+    unified_logger_output, clean_links, remove_content_between_markers, callersname, replace_longest_hashtag
+from src.open_ai_handler import ask_gpt, clean_model_output
+from src.prompt_engineering import gpt_build_chat_log_conversation
 from src.search_handler import return_news_list, returns_news_list_news_api
 from src.sql_handler import sql_check_text_already_replied, sql_write_replied_tweet_meta, \
     sql_mention_already_answered, \
     sql_write_mentions_meta, sql_news_already_posted, sql_write_timeline_posts, sql_get_n_latest_records
 from src.twitter_handler import reply_to_tweet, get_mentions, post_a_tweet, get_tweets_and_filter, \
     check_if_replied_to_mention_and_update_db
+
 
 #ToDo if the response passes all filters but is to long make a thread!
 
@@ -60,7 +60,10 @@ def reply_to_tweet_by_hashtag(hashtag, like, mood, nuance, ai_personality, model
 
             raw_response = response
             response = replace_bad_hashtags(response)
-            response = tweak_gpt_outputs(gpt_response=response)
+            response = clean_model_output(gpt_response=response)
+
+            if len(response) > max_response_len:
+                response = replace_longest_hashtag(response, replacement="")
 
             l_count +=1
             if l_count == max_l_count:
@@ -136,7 +139,7 @@ def reply_to_mentions(like, mood, nuance, ai_personality, temperature, model,max
             clean_tweet = re.sub(r'(@)\S+', '', tweet['full_text'])
             clean_tweet = re.sub(r'\s+', ' ', clean_tweet)
 
-            chat_log, params = gpt_build_chat_log_conversation(newprompt=unicodedata.normalize("NFKD", clean_tweet),
+            chat_log, params = gpt_build_chat_log_conversation(newprompt=clean_tweet,
                                                                ai_personality=ai_personality,
                                                                max_output_len=max_response_len,
                                                                rules=config.config["twitter_reply_rules_V2"], mood=mood,
@@ -156,10 +159,11 @@ def reply_to_mentions(like, mood, nuance, ai_personality, temperature, model,max
                                    model=model, ability="reply_to_mentions",params=params)
                 response = remove_content_between_markers(text=response, start_marker="It's important", end_marker="#")
                 response = remove_content_between_markers(text=response, start_marker="Let's", end_marker="#")
-                response = tweak_gpt_outputs(gpt_response=response)
+                response = clean_model_output(gpt_response=response)
                 response = replace_bad_hashtags(response)
 
-
+                if len(response) > max_response_len:
+                    response = replace_longest_hashtag(response, replacement="")
 
                 l_count += 1
                 if l_count == max_l_count:
@@ -234,7 +238,7 @@ def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, mode
             logger.info(f"Link: {v['url']}")
 
             # prompt = build_twitter_prompt_news(question=body, mood=mood, nuance=nuance)
-            chat_log, params = gpt_build_chat_log_conversation(newprompt= unicodedata.normalize("NFKD", body), ai_personality=ai_personality, max_output_len= max_response_len, rules=config.config["twitter_reply_rules_V2"], mood=mood, nuances=nuance)
+            chat_log, params = gpt_build_chat_log_conversation(newprompt= body, ai_personality=ai_personality, max_output_len= max_response_len, rules=config.config["twitter_reply_rules_V2"], mood=mood, nuances=nuance)
             response = []
             l_count = 0
             max_l_count = 4
@@ -246,6 +250,9 @@ def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, mode
                 response = ask_gpt(chat_log=chat_log, ai_personality=ai_personality, temperature=temperature, model=model,
                                    ability="post_news_tweet", params = params)
                 response = replace_bad_hashtags(response)
+
+                if len(response) > max_response_len:
+                    response = replace_longest_hashtag(response, replacement="")
 
                 l_count += 1
                 if l_count == max_l_count:
