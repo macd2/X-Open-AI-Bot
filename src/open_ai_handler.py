@@ -71,7 +71,7 @@ def ask_gpt(prompt, ai_personality, temperature, model, chat_log=None, ability="
     logger.info(f"Prompt: {prompt}")
     filter_ = "passed"
     while not answer or answer == "None":
-        logger.info(f"TRY: {c}")
+        logger.info(f"GPT TRY: {c}")
         try:
             answer = gpt(model=model, chat_log=chat_log, temp=temperature, n=1, max_tokens=52, presence_penalty=1)
         except openai.error.RateLimitError as e:

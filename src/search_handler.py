@@ -120,8 +120,8 @@ def filter_news(response_, filter_words:list):
         if int(response_["totalResults"]) == 0:
             return None
 
-        filtered_articles = [i for i in response_["articles"] if all(keyword not in i["body"] for keyword in filter_words)]
-        return filtered_articles
+        response_["articles"] = [i for i in response_["articles"] if all(keyword not in i["body"] for keyword in filter_words)]
+        return response_
 
 
 newsapi = NewsApiClient(api_key=env['news_api_key'])
@@ -159,6 +159,9 @@ def get_news_news_api(search_term, type_: str):
             logger.error(f"{callersname()} : Got error in getting news: {e}")
             return None, None
 
+        if not top_headlines:
+            # In case the filter takes out all news results
+            return None, None
         return top_headlines, category
 
     if type_ == "all_articles":
