@@ -113,21 +113,36 @@ def write_body_text(response_):
             i["body"] = i["title"].split(" -")[0] + ". " + i["description"]
     return response_
 
-def filter_news():
-    #Todo be Implemented. filter out news where the discription is empty or where filter words appear
-    # filter words ["Pride", "LGBTQ+"]
-    pass
+def filter_news(response_, filter_words:list):
+    # Todo be Implemented. filter out news where the discription is empty or where filter words appear
+    # Filter words ["Pride", "LGBTQ+"]
+    if response_["status"] == 'ok':
+        if int(response_["totalResults"]) == 0:
+            return None
+
+        filtered_articles = [i for i in response_["articles"] if all(keyword not in i["body"] for keyword in filter_words)]
+        return filtered_articles
+
+
 newsapi = NewsApiClient(api_key=env['news_api_key'])
 def get_news_news_api(search_term, type_: str):
     if type_ == "top_headlines":
         # /v2/top-headlines
-        category = random.choice(['business',
-                                  'entertainment',
-                                  'general',
-                                  # 'health',
+        # To Do refactor so it will always match the search term list
+        if search_term in ['Investing', 'management', 'Finance', 'Risk', 'Economy']:
+            category = 'business'
+        elif search_term in ['Discoveries']:
+            category = random.choice([
                                   'science',
-                                  # 'sports',
                                   'technology'])
+        else:
+            category = 'business',   # ['business',
+                                      #'entertainment',
+                                      # 'general',
+                                      # 'health',
+                                      # 'science',
+                                      # 'sports',
+                                      # 'technology']
         logger.info(f"Using search term: {search_term} and category: {category}")
         top_headlines = newsapi.get_top_headlines(q=search_term,  # 'bitcoin',
                                                   category=category,
@@ -139,6 +154,7 @@ def get_news_news_api(search_term, type_: str):
             top_headlines = write_description_hash(top_headlines)
             top_headlines = write_search_term(top_headlines, search_term)
             top_headlines = write_body_text(top_headlines)
+            top_headlines = filter_news(top_headlines, filter_words=["gay", "woman rights","LGBT", "Woman rights"])
         except Exception as e:
             logger.error(f"{callersname()} : Got error in getting news: {e}")
             return None, None
@@ -165,6 +181,7 @@ def get_news_news_api(search_term, type_: str):
             all_articles = write_description_hash(all_articles)
             all_articles = write_search_term(all_articles, search_term)
             all_articles = write_body_text(all_articles)
+            all_articles = filter_news(all_articles, filter_words=["gay", "woman rights", "LGBT", "Woman rights"])
         except Exception as e:
             logger.error(f"{callersname()} : Got error in getting news: {e}")
             return None
@@ -210,7 +227,7 @@ def returns_news_list_news_api(search_term: str, use_cache: bool, use_api=True, 
             r2 = all_articles["articles"]
 
         search_results = r1 + r2
-        search_results = [x for x in search_results if "pride" not in x["body"]]
+        search_results = [x for x in search_results if "LGBT" not in x["body"]]
         write_pickle(obj=search_results, filename=search_result_file_name)
         return search_results, search_term
 
