@@ -44,27 +44,25 @@ def reply_to_tweet_by_hashtag(hashtag, like, mood, nuance, ai_personality, model
         response = []
 
         l_count = 0
+        max_l_count = 4
         # Post the reply
         while len(response) > 280 or not response:
             time.sleep(5)
-            logger.info(f"reply_to_tweet_by_hashtag: Answer too long, regenerate Len: {len(response)}")
+            logger.info(f"{callersname()}: Answer too long, regenerate Len: {len(response)}")
             response = ask_gpt(prompt=prompt, ai_personality=ai_personality, temperature=temperature, model=model,
                                ability="reply_to_tweet_by_hashtag")
             raw_response = response
             response = replace_bad_hashtags(response)
             response = tweak_gpt_outputs(gpt_response=response)
+
             l_count +=1
-            if l_count == 5:
-                # After 5 tries break the loop
+            if l_count == max_l_count:
+                # After max_l_count tries break the loop
+                logger.info(f"{callersname()} : Response remains to long tried {l_count} times Skipping")
                 break
 
-        if l_count == 5:
-            logger.info(f"Response remians to long take next tweet")
-            # after 5 tries take the next tweet.
-            continue
-
         # Reply to the tweet
-        if response == "NOT PASSED":
+        if response == "NOT PASSED" or l_count == max_l_count:
             continue
 
         unified_logger_output(model_response=response, personality=ai_personality, nuance=nuance, mood=mood,
@@ -132,9 +130,12 @@ def reply_to_mentions(like, mood, nuance, ai_personality, temperature, model):
             # Get the response from the GPT model
             logger.info(f"Get Response from: {model}")
             response = []
+            l_count = 0
+            max_l_count = 4
             # Make sure the response length is within Twitter's limit
             while len(response) > 280 or not response:
-                logger.info(f"Reply to mention: Response too long! Regenerating Len: {len(response)}")
+                time.sleep(random.randrange(5, 10))
+                logger.info(f"{callersname()}: Response too long! Regenerating Len: {len(response)}")
                 response = ask_gpt(chat_log=chat_log, prompt=prompt, ai_personality=ai_personality,
                                    temperature=temperature,
                                    model=model, ability="reply_to_mentions")
@@ -143,9 +144,14 @@ def reply_to_mentions(like, mood, nuance, ai_personality, temperature, model):
                 response = tweak_gpt_outputs(gpt_response=response)
                 response = replace_bad_hashtags(response)
 
-                time.sleep(random.randrange(10, 20))
 
-            if response == "NOT PASSED":
+
+                l_count += 1
+                if l_count == max_l_count:
+                    logger.info(f"{callersname()} : Response remains to long tried {l_count} times Skipping")
+                    break
+
+            if response == "NOT PASSED" or l_count == max_l_count:
                 continue
 
             logger.info(f"Reply to: {tweet['full_text']}")
@@ -214,16 +220,23 @@ def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, mode
 
             prompt = build_twitter_prompt_news(question=body, mood=mood, nuance=nuance)
             response = []
+            l_count = 0
+            max_l_count = 4
 
             while len(response) > 260 or not response:
                 time.sleep(random.randrange(1, 5))
                 if response:
-                    logger.info(f"Response too long. Regenerating. Len: {len(response)}")
+                    logger.info(f"{callersname()} : Response too long. Regenerating. Len: {len(response)}")
                 response = ask_gpt(prompt=prompt, ai_personality=ai_personality, temperature=temperature, model=model,
                                    ability="post_news_tweet")
                 response = replace_bad_hashtags(response)
 
-            if response == "NOT PASSED":
+                l_count += 1
+                if l_count == max_l_count:
+                    logger.info(f"{callersname()} : Response remains to long tried {l_count} times Skipping")
+                    break
+
+            if response == "NOT PASSED" or l_count == max_l_count:
                 continue
 
             tweet = f"{response} {v['url']}"
