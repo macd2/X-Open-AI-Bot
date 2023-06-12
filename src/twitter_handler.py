@@ -7,29 +7,34 @@ from dotenv import dotenv_values
 
 from config import config
 from src.communication_handler import logger
-from src.helper import df_from_tweepy_response, get_hash, filter_tweets_from_response, clean_links
+from src.helper import get_hash, filter_tweets_from_response, clean_links, callersname
 from src.pickle_handler import load_pickle, write_pickle
 from src.sql_handler import sql_write_mentions_meta, sql_already_in_db
 
 
 def create_api():
-    env = dotenv_values(".env")
-    consumer_key = env["consumer_key"]
-    consumer_secret = env["consumer_secret"]
-    access_token = env["access_token"]
-    access_token_secret = env["access_token_secret"]
+    connected = False
+    while not connected:
+        env = dotenv_values(".env")
+        consumer_key = env["consumer_key"]
+        consumer_secret = env["consumer_secret"]
+        access_token = env["access_token"]
+        access_token_secret = env["access_token_secret"]
 
-    auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-    auth.set_access_token(access_token, access_token_secret)
-    connector = tweepy.API(auth, wait_on_rate_limit=True)
+        auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+        auth.set_access_token(access_token, access_token_secret)
+        connector = tweepy.API(auth, wait_on_rate_limit=True)
 
-    try:
-        connector.verify_credentials()
-    except Exception as e:
-        logger.error("Error creating API", exc_info=True)
-        raise e
-    logger.info("Twitter API created")
-    return connector
+        try:
+            connector.verify_credentials()
+        except Exception as e:
+            # logger.error("Error creating API", exc_info=True)
+            logger.error(f"Couldn't connect to twitter API got: {e}")
+            logger.info("Retry")
+            time.sleep(5)
+            continue
+        logger.info("Twitter API created")
+        return connector
 
 
 api_ = create_api()
@@ -108,7 +113,7 @@ def get_tweet_by_hashtag(hashtag: str, since_days, num_tweets, return_df=False):
                                since_id=date_since,
                                tweet_mode='extended').items(num_tweets)
     except Exception as e:
-        logger.error("Got error in twitter api_", e)
+        logger.error(f"{callersname()} :Got error: {e}")
         logger.info("Retry")
         time.sleep(10)
         tweets = tweepy.Cursor(api_.search_tweets,
@@ -117,10 +122,10 @@ def get_tweet_by_hashtag(hashtag: str, since_days, num_tweets, return_df=False):
                                since_id=date_since,
                                tweet_mode='extended').items(num_tweets)
 
-    if return_df:
-        return df_from_tweepy_response(returned_status=tweets)
-    else:
-        return tweets
+    # if return_df:
+    #     return df_from_tweepy_response(returned_status=tweets)
+    # else:
+    return tweets
 
 
 def reply_to_tweet(tweet, ai_response, like=True):
