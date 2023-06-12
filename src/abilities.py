@@ -5,7 +5,7 @@ from time import sleep
 
 from src.communication_handler import logger
 from src.helper import get_hash, replace_bad_hashtags, get_cosine_similarity_score, \
-    unified_logger_output, clean_links, remove_content_between_markers
+    unified_logger_output, clean_links, remove_content_between_markers, callersname
 from src.open_ai_handler import ask_gpt, tweak_gpt_outputs
 from src.prompt_engineering import build_twitter_prompt, build_twitter_prompt_news, \
     build_chat_log, build_twitter_promt_for_reply_mentions
@@ -59,7 +59,7 @@ def reply_to_tweet_by_hashtag(hashtag, like, mood, nuance, ai_personality, model
         status, error = reply_to_tweet(tweet=tweet, like=like, ai_response=response)
 
         if error != 200:
-            logger.error(f"Sending not Successful, got error: {error}")
+            logger.error(f"{callersname()} :Sending not Successful, Got error: {error}")
 
         t = {
             "hashtag": hashtag,
@@ -191,18 +191,17 @@ def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, mode
             logger.info('News: ' + body)
 
             prompt = build_twitter_prompt_news(question=body, mood=mood, nuance=nuance)
-            response = ask_gpt(prompt=prompt, ai_personality=ai_personality, temperature=temperature, model=model,
-                               ability="post_news_tweet")
+            response = []
 
-            while len(response) > 260:
-                logger.info(f"Response too long. Regenerating. Len: {len(response)}")
+            while len(response) > 260 or not response:
+                if response:
+                    logger.info(f"Response too long. Regenerating. Len: {len(response)}")
                 response = ask_gpt(prompt=prompt, ai_personality=ai_personality, temperature=temperature, model=model,
                                    ability="post_news_tweet")
+                response = replace_bad_hashtags(response)
                 time.sleep(random.randrange(1, 5))
 
-            response = replace_bad_hashtags(response)
             tweet = f"{response} {v['url']}"
-
             unified_logger_output(model_response=response, personality=ai_personality, nuance=nuance, mood=mood,
                                   temp=temperature, model=model)
 
