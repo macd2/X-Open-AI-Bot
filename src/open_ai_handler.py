@@ -7,7 +7,7 @@ import openai
 from dotenv import dotenv_values
 
 from src.communication_handler import logger
-from src.helper import callersname
+from src.helper import callersname, get_content_between_markers
 from src.prompt_engineering import build_chat_log
 from src.sql_handler import sql_write_ai_params
 
@@ -99,11 +99,9 @@ def ask_gpt(prompt, ai_personality, temperature, model, chat_log=None, ability="
             answer = None
             sleep(random.randrange(3, 10))
 
-
-
-
     ai_params = {
         "ability": ability,
+        "question":get_content_between_markers(text=prompt["prompt"], start_marker="*", end_marker="*") if prompt["prompt"] else None,
         "prompt": prompt["prompt"],
         "response": answer,
         "personality": ai_personality,

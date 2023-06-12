@@ -164,6 +164,10 @@ def remove_content_between_markers(text, start_marker, end_marker):
 
     return text[:start_index] + text[end_index:]
 
+def get_content_between_markers(text, start_marker, end_marker):
+    startpos = text.find(start_marker) + len(start_marker)
+    endpos = text.find(end_marker, startpos)
+    return text[startpos:endpos].strip()
 
 def filter_tweets_from_response(returned_status, min_text_len=70):
     tweets_to_consider = []
@@ -320,4 +324,4 @@ def whoami():
     return inspect.getframeinfo(frame).function
 import sys
 def callersname():
-    return sys._getframe(2).f_code.co_name
+    return f"{sys._getframe(2).f_code.co_name}".upper()
