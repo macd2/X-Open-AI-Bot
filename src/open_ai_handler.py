@@ -16,7 +16,7 @@ from src.sql_handler import sql_write_ai_params
 # image = openai.Image()
 
 
-def tweak_gpt_outputs(gpt_response):
+def clean_model_output(gpt_response):
     keywords = ["respectfully ", "It is important to ", "Possible response:", "I appreciate your response, but ",
                 "@_RussellEdwards", "I have to respectfully disagree with the text between the * signs."]
     for i in keywords:
@@ -42,10 +42,18 @@ def gpt(model, chat_log, temp, n=1, max_tokens=52, presence_penalty=1):
     return response.choices[0]['message']['content']
 
 #ToDo filtere seperate the hastgas and the text if the filtered word is only in the hastags than replace the hashtag for example #Humanintereaction
-def get_filter(filters, answer):
+def model_not_comply_filter(answer):
+    if "I'm sorry" in answer and "AI" in answer and "I cannot".lower() in answer.lower():
+        logger.info("Model don't want to comply filter activated: I'm sorry, AI and I cannot in response")
+        return True
+    else:
+        return False
+
+
+def general_response_filter(filters, answer):
     for x in filters:
         if x.lower() in answer.lower():
-            logger.info(f"Response did not pass filter: {x}")
+            logger.info(f"General Repose filter activate on: {x}")
             return True
     return False
 
@@ -56,7 +64,7 @@ def ask_gpt(prompt="", ai_personality="", temperature=0.8, model="gpt-3.5-turbo"
 
     if not chat_log:
         build_chat_log_ = True
-        chat_log = build_chat_log(prompt=unicodedata.normalize("NFKD", prompt["prompt"]), ai_personality=ai_personality)
+        chat_log = build_chat_log(prompt=prompt["prompt"], ai_personality=ai_personality)
 
     answer = None
 
@@ -64,8 +72,11 @@ def ask_gpt(prompt="", ai_personality="", temperature=0.8, model="gpt-3.5-turbo"
     c = 1
     t = 10
     f_count = 1
-    filters = ["I'm sorry,", "sorry", "humans", "human", "As an AI", "i cannot follow", "sorry, I cannot",
-               "let's try to", "I'm an AI", "can't physically", "I'm just a program","with the text between"]
+
+    filters = ["humans", "human", "As an AI", "i cannot follow", "sorry, I cannot",
+               "let's try to", "I'm an AI", "can't physically", "I'm just a program","with the text between",
+               "my programming","comply with those rules","as an AI language model", "inclusivity", "harmful language"]
+
     logger.info(f"Prompt: {prompt if prompt else chat_log}")
     filter_ = "passed"
     while not answer or answer == "None":
@@ -87,7 +98,7 @@ def ask_gpt(prompt="", ai_personality="", temperature=0.8, model="gpt-3.5-turbo"
             continue
 
         logger.info(f"Model Response: {answer}")
-        if get_filter(filters=filters, answer=answer):
+        if general_response_filter(filters=filters, answer=answer) or model_not_comply_filter(answer=answer):
             f_count += 1
             c += 1
             if f_count == 4:
