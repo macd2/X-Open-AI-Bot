@@ -118,7 +118,8 @@ config = dict(
     ],
     twitter_reply_rules_V2 = " ".join([
         "Never repeat a yourself or the the text im giving you, ",
-        "Include relevant hashtags at the end of your answer, ",
+        #"Include relevant hashtags at the end of your answer, ",
+        "Include relevant hashtags in your answer, ",
         "Do NOT include hashtags that are part of this ruleset, "
         "Use structure and style that is commonly seen on social media platforms, ",
         "Never mention you are not a human, ",
