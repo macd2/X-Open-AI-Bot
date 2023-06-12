@@ -17,6 +17,7 @@ from src.sql_handler import sql_check_text_already_replied, sql_write_replied_tw
 from src.twitter_handler import reply_to_tweet, get_mentions, post_a_tweet, get_tweets_and_filter, \
     check_if_replied_to_mention_and_update_db
 
+#ToDo if the response passes all filters but is to long make a thread!
 
 def reply_to_tweet_by_hashtag(hashtag, like, mood, nuance, ai_personality, model, temperature=0.8,
                               use_cached_tweets=True, n_posts=1):
@@ -42,6 +43,7 @@ def reply_to_tweet_by_hashtag(hashtag, like, mood, nuance, ai_personality, model
 
         response = []
 
+        l_count = 0
         # Post the reply
         while len(response) > 280 or not response:
             time.sleep(5)
@@ -51,6 +53,15 @@ def reply_to_tweet_by_hashtag(hashtag, like, mood, nuance, ai_personality, model
             raw_response = response
             response = replace_bad_hashtags(response)
             response = tweak_gpt_outputs(gpt_response=response)
+            l_count +=1
+            if l_count == 5:
+                # After 5 tries break the loop
+                break
+
+        if l_count == 5:
+            logger.info(f"Response remians to long take next tweet")
+            # after 5 tries take the next tweet.
+            continue
 
         # Reply to the tweet
         if response == "NOT PASSED":

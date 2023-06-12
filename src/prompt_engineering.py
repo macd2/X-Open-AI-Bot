@@ -10,7 +10,7 @@ def build_twitter_prompt(mood, question, nuance):
     prompt = " ".join(
         [
             f"respond to the text between the * signs *{clean_links(question)}* {mood} {nuance} and allways follow these rules:"]
-        + ["1. Use only a MAXIMUM of 275 characters!"]
+        + ["1. respond with a tweet with a MAXIMUM of 275 characters!"]
         + config["twitter_reply_rules"][1:]
     )
     return {"prompt": prompt, "mood": mood, "nuance": nuance}
