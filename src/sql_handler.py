@@ -85,7 +85,7 @@ def init_db(tables=None):
              "fields": ["hashtag", "input_tweet", "input_tweet_hash", "input_tweet_id", "output_tweet",
                         "raw_model_response", "output_tweet_id", "output_to_username", "status"]},
             {"name": "ai_params",
-             "fields": ["question", "prompt", "response", "personality", "nuance", "mood", "model", "temperature",
+             "fields": ["question", "prompt", "response", "personality", "nuance", "mood", "rules","model", "temperature",
                         "ability", "filter"]},
             {"name": "timeline_posts",
              "fields": ["search_term", "news_date","body", "body_hash", "description_hash", "input_text_url", "output_text",

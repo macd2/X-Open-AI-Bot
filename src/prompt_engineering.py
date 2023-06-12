@@ -30,7 +30,8 @@ def build_twitter_promt_for_reply_mentions(mood, question, nuance):
 def build_twitter_prompt_news(mood, question, nuance):
     question = unicodedata.normalize("NFKD", question)
     prompt = " ".join(
-        [f"respond to the text between the * signs *{clean_links(question)}* {mood} {nuance} and allways follow these rules:"]
+        [
+            f"respond to the text between the * signs *{clean_links(question)}* {mood} {nuance} and allways follow these rules:"]
         + ["1. Use only a MAXIMUM of 260 characters!"]
         + config["twitter_reply_rules"][1:]
     )
@@ -51,20 +52,45 @@ def build_chat_log(prompt, ai_personality, replace_at_sings=False):
     return chat_log
 
 
-def build_chat_log_conversation(reply, replied_to_text, ai_personality):
+def clean_chat_log_input(text):
     """Clean all @ signs before feeding to the model"""
-    reply = re.sub(r'(@)\S+', '', reply)
-    reply = re.sub(r'\s+', ' ', reply)
-    replied_to_text = re.sub(r'(@)\S+', '', replied_to_text)
+    text = re.sub(r'(@)\S+', '', text)
+    text = re.sub(r'\s+', ' ', text)
+    return text
 
-    chat_log = [
-        {"role": "system", "content": ai_personality},
-        {"role": "assistant", "content": f"{replied_to_text}"},
+
+def gpt_build_chat_log_conversation(newprompt, ai_personality, max_output_len, rules, mood, nuances, role="user"):
+    history = [
         {"role": "user",
-         "content": f"respond to text after the : sign and don't use more than 275 characters: {reply}"}
+         "content": f"i will give you a text and i want you to respond {mood} and {nuances} and with not more than {max_output_len} characters respond with OK when you are ready!"},
+        {"role": "assistant", "content": "OK"},
+        {"role": "user",
+         "content": f'following this rules for your response: {rules} respond with OK when you are ready!'},
+        {"role": "assistant", "content": "OK"},
     ]
-    return chat_log
 
+    chat_log = [{"role": "system", "content": ai_personality}]
+    chat_log += history
+    chat_log.append({"role": "user", "content": newprompt})
+
+    params = {"mood": mood, "nuance": nuances, "max_output_len": max_output_len, "rules": rules}
+
+    return chat_log, params
+
+
+# def gpt_build_chat_log_conversation(reply, replied_to_text, ai_personality):
+#     """Clean all @ signs before feeding to the model"""
+#     reply = re.sub(r'(@)\S+', '', reply)
+#     reply = re.sub(r'\s+', ' ', reply)
+#     replied_to_text = re.sub(r'(@)\S+', '', replied_to_text)
+#
+#     chat_log = [
+#         {"role": "system", "content": ai_personality},
+#         {"role": "assistant", "content": f"{replied_to_text}"},
+#         {"role": "user",
+#          "content": f"respond to text after the : sign and don't use more than 275 characters: {reply}"}
+#     ]
+#     return chat_log
 
 good_combos = [
     {

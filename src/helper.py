@@ -198,7 +198,9 @@ def filter_tweets_from_response(returned_status, min_text_len=70):
                     "tag" not in c.split(" ") and
                     "airdrop" not in c.split(" ") and
                     "giveaway" not in c.split(" ") and
-                    "binary" not in c.split(" ")
+                    "binary" not in c.split(" ") and
+                    "black woman" not in c and
+                    "woman" not in c.split(" ")
             ):
                 tweets_to_consider.append(tweet)
 

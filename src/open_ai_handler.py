@@ -49,15 +49,13 @@ def get_filter(filters, answer):
             return True
     return False
 
-def ask_gpt(prompt, ai_personality, temperature, model, chat_log=None, ability=""):
+def ask_gpt(prompt="", ai_personality="", temperature=0.8, model="gpt-3.5-turbo", chat_log=None, params=None, ability=""):
     # if a chat log is given we use the conversation mode based on the chat log
     logger.info(f"Asking: {model}")
+    build_chat_log_ = False
 
-    if chat_log:
-        # if we give a chat log we need to set the text of the prompt to the chat log directly
-        # ToDo optimize this procedure
-        prompt["prompt"] = unicodedata.normalize("NFKD", chat_log[-1]["content"])
-    else:
+    if not chat_log:
+        build_chat_log_ = True
         chat_log = build_chat_log(prompt=unicodedata.normalize("NFKD", prompt["prompt"]), ai_personality=ai_personality)
 
     answer = None
@@ -68,7 +66,7 @@ def ask_gpt(prompt, ai_personality, temperature, model, chat_log=None, ability="
     f_count = 1
     filters = ["I'm sorry,", "sorry", "humans", "human", "As an AI", "i cannot follow", "sorry, I cannot",
                "let's try to", "I'm an AI", "can't physically", "I'm just a program","with the text between"]
-    logger.info(f"Prompt: {prompt}")
+    logger.info(f"Prompt: {prompt if prompt else chat_log}")
     filter_ = "passed"
     while not answer or answer == "None":
         logger.info(f"GPT TRY: {c}")
@@ -99,18 +97,32 @@ def ask_gpt(prompt, ai_personality, temperature, model, chat_log=None, ability="
             answer = None
             sleep(random.randrange(3, 10))
 
-    ai_params = {
-        "ability": ability,
-        "question":get_content_between_markers(text=prompt["prompt"], start_marker="*", end_marker="*") if prompt["prompt"] else None,
-        "prompt": prompt["prompt"],
-        "response": answer,
-        "personality": ai_personality,
-        "nuance": prompt["nuance"],
-        "mood": prompt["mood"],
-        "model": model,
-        "temperature": float(temperature),
-        "filter": filter_
-    }
+    if build_chat_log_:
+        ai_params = {
+            "ability": ability,
+            "question":get_content_between_markers(text=prompt["prompt"], start_marker="*", end_marker="*") if prompt["prompt"] else None,
+            "prompt": prompt["prompt"],
+            "response": answer,
+            "personality": ai_personality,
+            "nuance": prompt["nuance"],
+            "mood": prompt["mood"],
+            "model": model,
+            "temperature": float(temperature),
+            "filter": filter_
+        }
+    else:
+        ai_params = {
+            "ability": ability,
+            "question": chat_log[-1]["content"],
+            "response": answer,
+            "personality": ai_personality,
+            "nuance": params["nuance"],
+            "mood": params["mood"],
+            "rules": params["rules"],
+            "model": model,
+            "temperature": float(temperature),
+            "filter": filter_
+        }
     sql_write_ai_params(ai_params=ai_params)
     if filter_ == "not_passed":
         answer = "NOT PASSED"

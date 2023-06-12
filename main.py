@@ -22,7 +22,7 @@ def reply_tweet():
 
         hashtag = random.choice(config["hashtags"])
 
-        reply_to_tweet_by_hashtag(hashtag=hashtag, like=like, mood=mood, nuance=nuance, model=model, ai_personality=ai_personality, temperature=temperature, use_cached_tweets=True, n_posts =5)
+        reply_to_tweet_by_hashtag(hashtag=hashtag, like=like, mood=mood, nuance=nuance, model=model, ai_personality=ai_personality, temperature=temperature, use_cached_tweets=True, n_posts =5,max_response_len=280)
 
         sleep_time = random.randrange(1 * 60 * 60, 3 * 60 * 60)  # between 4 and 6 hours
         logger.info(f"Reply to tweets complete sleeping for minutes: {int(sleep_time / 60)}")
@@ -40,7 +40,7 @@ def reply_mentions():
         nuance = random.choice(config["nuances"])
         like = True
 
-        reply_to_mentions(like=like, mood=mood, nuance=nuance, ai_personality=ai_personality, temperature=temperature, model=model)
+        reply_to_mentions(like=like, mood=mood, nuance=nuance, ai_personality=ai_personality, temperature=temperature, model=model,max_response_len=280)
 
         sleep_time = random.randrange(1 * 60 * 60, 2 * 60 * 60)
         logger.info(f'Reply mentions complete sleeping for minutes: {int(sleep_time / 60)}')
@@ -58,7 +58,7 @@ def post_news():
 
         search_term = random.choice(config["search_terms"])
 
-        post_news_tweet(search_term=search_term, mood=mood, nuance=nuance, ai_personality=ai_personality,                         temperature=temperature, model=model,randomize=True)
+        post_news_tweet(search_term=search_term, mood=mood, nuance=nuance, ai_personality=ai_personality,  temperature=temperature, model=model,max_response_len=260, randomize=True)
 
         sleep_time = random.randrange(1 * 60 * 60, 3 * 60 * 60)
         logger.info(f"Post new tweets complete sleeping for minutes: {int(sleep_time / 60)}")

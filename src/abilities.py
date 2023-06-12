@@ -4,12 +4,13 @@ import time
 import unicodedata
 from time import sleep
 
+import config
 from src.communication_handler import logger
 from src.helper import get_hash, replace_bad_hashtags, get_cosine_similarity_score, \
     unified_logger_output, clean_links, remove_content_between_markers, callersname
 from src.open_ai_handler import ask_gpt, tweak_gpt_outputs
 from src.prompt_engineering import build_twitter_prompt, build_twitter_prompt_news, \
-    build_chat_log, build_twitter_promt_for_reply_mentions
+    build_chat_log, build_twitter_promt_for_reply_mentions, gpt_build_chat_log_conversation
 from src.search_handler import return_news_list, returns_news_list_news_api
 from src.sql_handler import sql_check_text_already_replied, sql_write_replied_tweet_meta, \
     sql_mention_already_answered, \
@@ -19,7 +20,7 @@ from src.twitter_handler import reply_to_tweet, get_mentions, post_a_tweet, get_
 
 #ToDo if the response passes all filters but is to long make a thread!
 
-def reply_to_tweet_by_hashtag(hashtag, like, mood, nuance, ai_personality, model, temperature=0.8,
+def reply_to_tweet_by_hashtag(hashtag, like, mood, nuance, ai_personality, model, temperature=0.8, max_response_len=280,
                               use_cached_tweets=True, n_posts=1):
     logger.info(f"Filter tweets by hashtag: {hashtag}")
 
@@ -39,18 +40,24 @@ def reply_to_tweet_by_hashtag(hashtag, like, mood, nuance, ai_personality, model
 
         if "have questions" in tweet['full_text'].lower() or "have a question" in tweet['full_text'].lower():
             mood = "with an answer"
-        prompt = build_twitter_prompt(mood=mood, question=tweet['full_text'], nuance=nuance)
+
+        # prompt = build_twitter_prompt(mood=mood, question=tweet['full_text'], nuance=nuance)
+        chat_log, params = gpt_build_chat_log_conversation(newprompt=unicodedata.normalize("NFKD", tweet['full_text']),
+                                                           ai_personality=ai_personality, max_output_len=max_response_len,
+                                                           rules=config.config["twitter_reply_rules_V2"], mood=mood,
+                                                           nuances=nuance)
 
         response = []
 
         l_count = 0
         max_l_count = 4
         # Post the reply
-        while len(response) > 280 or not response:
+        while len(response) > max_response_len or not response:
             time.sleep(5)
             logger.info(f"{callersname()}: Answer too long, regenerate Len: {len(response)}")
-            response = ask_gpt(prompt=prompt, ai_personality=ai_personality, temperature=temperature, model=model,
-                               ability="reply_to_tweet_by_hashtag")
+            response = ask_gpt(chat_log=chat_log, ai_personality=ai_personality, temperature=temperature, model=model,
+                               ability="reply_to_tweet_by_hashtag",params=params)
+
             raw_response = response
             response = replace_bad_hashtags(response)
             response = tweak_gpt_outputs(gpt_response=response)
@@ -65,8 +72,7 @@ def reply_to_tweet_by_hashtag(hashtag, like, mood, nuance, ai_personality, model
         if response == "NOT PASSED" or l_count == max_l_count:
             continue
 
-        unified_logger_output(model_response=response, personality=ai_personality, nuance=nuance, mood=mood,
-                              temp=temperature, model=model)
+        unified_logger_output(personality=ai_personality, nuance=nuance, mood=mood, temp=temperature, model=model)
 
         logger.info("Sending Reply...")
         status, error = reply_to_tweet(tweet=tweet, like=like, ai_response=response)
@@ -94,7 +100,7 @@ def reply_to_tweet_by_hashtag(hashtag, like, mood, nuance, ai_personality, model
             time.sleep(random.randrange(1, 5))
 
 
-def reply_to_mentions(like, mood, nuance, ai_personality, temperature, model):
+def reply_to_mentions(like, mood, nuance, ai_personality, temperature, model,max_response_len=280):
     # Todo add more context get previouse replies and add to the conversation
     logger.info("Replying to mentions")
 
@@ -124,8 +130,17 @@ def reply_to_mentions(like, mood, nuance, ai_personality, temperature, model):
         if no_links.strip():
             # Build the prompt for the model using the tweet text, mood, and nuance
             # prompt = build_twitter_prompt(mood=mood, question=tweet['full_text'], nuance=nuance)
-            prompt = build_twitter_promt_for_reply_mentions(mood=mood, question=tweet['full_text'], nuance=nuance)
-            chat_log = build_chat_log(prompt=prompt["prompt"], ai_personality=ai_personality, replace_at_sings=True)
+            # prompt = build_twitter_promt_for_reply_mentions(mood=mood, question=tweet['full_text'], nuance=nuance)
+            # chat_log = build_chat_log(prompt=prompt["prompt"], ai_personality=ai_personality, replace_at_sings=True)
+
+            clean_tweet = re.sub(r'(@)\S+', '', tweet['full_text'])
+            clean_tweet = re.sub(r'\s+', ' ', clean_tweet)
+
+            chat_log, params = gpt_build_chat_log_conversation(newprompt=unicodedata.normalize("NFKD", clean_tweet),
+                                                               ai_personality=ai_personality,
+                                                               max_output_len=max_response_len,
+                                                               rules=config.config["twitter_reply_rules_V2"], mood=mood,
+                                                               nuances=nuance)
 
             # Get the response from the GPT model
             logger.info(f"Get Response from: {model}")
@@ -133,12 +148,12 @@ def reply_to_mentions(like, mood, nuance, ai_personality, temperature, model):
             l_count = 0
             max_l_count = 4
             # Make sure the response length is within Twitter's limit
-            while len(response) > 280 or not response:
+            while len(response) > max_response_len or not response:
                 time.sleep(random.randrange(5, 10))
                 logger.info(f"{callersname()}: Response too long! Regenerating Len: {len(response)}")
-                response = ask_gpt(chat_log=chat_log, prompt=prompt, ai_personality=ai_personality,
+                response = ask_gpt(chat_log=chat_log, ai_personality=ai_personality,
                                    temperature=temperature,
-                                   model=model, ability="reply_to_mentions")
+                                   model=model, ability="reply_to_mentions",params=params)
                 response = remove_content_between_markers(text=response, start_marker="It's important", end_marker="#")
                 response = remove_content_between_markers(text=response, start_marker="Let's", end_marker="#")
                 response = tweak_gpt_outputs(gpt_response=response)
@@ -185,7 +200,7 @@ def reply_to_mentions(like, mood, nuance, ai_personality, temperature, model):
         sleep(sleep_time)
 
 
-def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, model, use_cache=True, randomize=True):
+def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, model, use_cache=True, randomize=True, max_response_len = 260):
     logger.info(f"Use Search term: {search_term}")
 
     news_api_news, search_term = returns_news_list_news_api(search_term=search_term, use_cache=use_cache, use_api=True,
@@ -218,17 +233,18 @@ def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, mode
             logger.info('News: ' + unicodedata.normalize("NFKD", body))
             logger.info(f"Link: {v['url']}")
 
-            prompt = build_twitter_prompt_news(question=body, mood=mood, nuance=nuance)
+            # prompt = build_twitter_prompt_news(question=body, mood=mood, nuance=nuance)
+            chat_log, params = gpt_build_chat_log_conversation(newprompt= unicodedata.normalize("NFKD", body), ai_personality=ai_personality, max_output_len= max_response_len, rules=config.config["twitter_reply_rules_V2"], mood=mood, nuances=nuance)
             response = []
             l_count = 0
             max_l_count = 4
 
-            while len(response) > 260 or not response:
+            while len(response) > max_response_len or not response:
                 time.sleep(random.randrange(1, 5))
                 if response:
                     logger.info(f"{callersname()} : Response too long. Regenerating. Len: {len(response)}")
-                response = ask_gpt(prompt=prompt, ai_personality=ai_personality, temperature=temperature, model=model,
-                                   ability="post_news_tweet")
+                response = ask_gpt(chat_log=chat_log, ai_personality=ai_personality, temperature=temperature, model=model,
+                                   ability="post_news_tweet", params = params)
                 response = replace_bad_hashtags(response)
 
                 l_count += 1
