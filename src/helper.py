@@ -146,7 +146,8 @@ def replace_bad_hashtags(text: str):
         "#grumpy": "",
         "#arrogant": "",
         "#sarcastic": "",
-        "#motivation": ""
+        "#motivation": "",
+        "#skepticism": "",
     }
 
     for bad_hashtag, replacement in hashtag_mappings.items():

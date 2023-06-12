@@ -50,6 +50,7 @@ def reply_to_tweet_by_hashtag(hashtag, like, mood, nuance, ai_personality, model
                                ability="reply_to_tweet_by_hashtag")
             raw_response = response
             response = replace_bad_hashtags(response)
+            response = tweak_gpt_outputs(gpt_response=response)
 
         # Reply to the tweet
         if response == "NOT PASSED":
@@ -129,6 +130,8 @@ def reply_to_mentions(like, mood, nuance, ai_personality, temperature, model):
                 response = remove_content_between_markers(text=response, start_marker="It's important", end_marker="#")
                 response = remove_content_between_markers(text=response, start_marker="Let's", end_marker="#")
                 response = tweak_gpt_outputs(gpt_response=response)
+                response = replace_bad_hashtags(response)
+
                 time.sleep(random.randrange(10, 20))
 
             if response == "NOT PASSED":

@@ -42,7 +42,7 @@ def reply_mentions():
 
         reply_to_mentions(like=like, mood=mood, nuance=nuance, ai_personality=ai_personality, temperature=temperature, model=model)
 
-        sleep_time = random.randrange(1 * 60 * 60, 1 * 60 * 60)
+        sleep_time = random.randrange(1 * 60 * 60, 2 * 60 * 60)
         logger.info(f'Reply mentions complete sleeping for minutes: {int(sleep_time / 60)}')
         sleep(sleep_time)
 
@@ -75,3 +75,4 @@ if __name__ == "__main__":
     p1.join()
     p2.join()
     p3.join()
+
