@@ -1,6 +1,6 @@
 openai
 tweepy
-pandas
+# pandas
 python-dotenv
 duckduckgo_search
 # tenacity

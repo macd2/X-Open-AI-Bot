@@ -4,8 +4,9 @@ import math
 import re
 from calendar import month_abbr
 from collections import Counter
+import inspect
 
-import pandas as pd
+# import pandas as pd
 
 from src.communication_handler import logger
 
@@ -199,98 +200,98 @@ def filter_tweets_from_response(returned_status, min_text_len=70):
     return tweets_to_consider
 
 
-def df_from_tweepy_response(returned_status):
-    # takes a twitter courser object
-    # Creating DataFrame using pandas
-    # db = pd.DataFrame(columns=['username',
-    #                            "user_id",
-    #                            'description',
-    #                            'location',
-    #                            'following',
-    #                            'followers',
-    #                            'ffratio',  # followers / following
-    #                            'frt_ratio',  # followers / total-tweets
-    #                            'totaltweets',
-    #                            'retweetcount',
-    #                            'text',
-    #                            'cleanedtext',
-    #                            'hashtags',
-    #                            'symbols',
-    #                            'id'])
-
-    list_tweets = [tweet for tweet in returned_status]
-    a = [tweet._json for tweet in list_tweets]
-    d = pd.DataFrame(a)
-
-    # # Counter to maintain Tweet Count
-    # c = 1
-    #
-    # # we will iterate over each tweet in the
-    # # list for extracting information about each tweet
-    # for tweet in list_tweets:
-    #     username = tweet.user.screen_name
-    #     user_id = tweet.user.id
-    #     description = tweet.user.description
-    #     location = tweet.user.location
-    #     following = tweet.user.friends_count
-    #     followers = tweet.user.followers_count
-    #     totaltweets = tweet.user.statuses_count
-    #     retweetcount = tweet.retweet_count
-    #     hashtags = tweet.entities['hashtags']
-    #     id = tweet.id
-    #     # replied_tweet = tweet.replied_tweets
-    #
-    #     # Retweets can be distinguished by
-    #     # a retweeted_status attribute,
-    #     # in case it is an invalid reference,
-    #     # except block will be executed
-    #
-    #     try:
-    #         text = tweet.retweeted_status.full_text
-    #     except AttributeError:
-    #         text = tweet.full_text
-    #     hashtext = list()
-    #     for j in range(0, len(hashtags)):
-    #         hashtext.append(hashtags[j]['text'])
-    #
-    #     symbols = []
-    #     for x in text.split():
-    #         if len(x) > 1 and "$" in x and not x[1].isdigit():
-    #             symbols.append(x)
-    #
-    #     try:
-    #         ffratio = followers / following
-    #     except ZeroDivisionError:
-    #         ffratio = 0
-    #
-    #     try:
-    #         frt_ratio = followers / totaltweets
-    #     except ZeroDivisionError:
-    #         frt_ratio = 0
-    #
-    #     # Here we are appending all the
-    #     # extracted information in the DataFrame
-    #     ith_tweet = [username,
-    #                  user_id,
-    #                  description,
-    #                  location,
-    #                  following,
-    #                  followers,
-    #                  ffratio,
-    #                  frt_ratio,
-    #                  totaltweets,
-    #                  retweetcount,
-    #                  text,
-    #                  clean_tweet(text),
-    #                  hashtext,
-    #                  symbols,
-    #                  id]
-    #     db.loc[len(db)] = ith_tweet
-    #
-    #     # Function call to print tweet data on screen
-    #     # printtweetdata(i, ith_tweet)
-    #     c += 1
-    return d
+# def df_from_tweepy_response(returned_status):
+#     # takes a twitter courser object
+#     # Creating DataFrame using pandas
+#     # db = pd.DataFrame(columns=['username',
+#     #                            "user_id",
+#     #                            'description',
+#     #                            'location',
+#     #                            'following',
+#     #                            'followers',
+#     #                            'ffratio',  # followers / following
+#     #                            'frt_ratio',  # followers / total-tweets
+#     #                            'totaltweets',
+#     #                            'retweetcount',
+#     #                            'text',
+#     #                            'cleanedtext',
+#     #                            'hashtags',
+#     #                            'symbols',
+#     #                            'id'])
+#
+#     list_tweets = [tweet for tweet in returned_status]
+#     a = [tweet._json for tweet in list_tweets]
+#     d = pd.DataFrame(a)
+#
+#     # # Counter to maintain Tweet Count
+#     # c = 1
+#     #
+#     # # we will iterate over each tweet in the
+#     # # list for extracting information about each tweet
+#     # for tweet in list_tweets:
+#     #     username = tweet.user.screen_name
+#     #     user_id = tweet.user.id
+#     #     description = tweet.user.description
+#     #     location = tweet.user.location
+#     #     following = tweet.user.friends_count
+#     #     followers = tweet.user.followers_count
+#     #     totaltweets = tweet.user.statuses_count
+#     #     retweetcount = tweet.retweet_count
+#     #     hashtags = tweet.entities['hashtags']
+#     #     id = tweet.id
+#     #     # replied_tweet = tweet.replied_tweets
+#     #
+#     #     # Retweets can be distinguished by
+#     #     # a retweeted_status attribute,
+#     #     # in case it is an invalid reference,
+#     #     # except block will be executed
+#     #
+#     #     try:
+#     #         text = tweet.retweeted_status.full_text
+#     #     except AttributeError:
+#     #         text = tweet.full_text
+#     #     hashtext = list()
+#     #     for j in range(0, len(hashtags)):
+#     #         hashtext.append(hashtags[j]['text'])
+#     #
+#     #     symbols = []
+#     #     for x in text.split():
+#     #         if len(x) > 1 and "$" in x and not x[1].isdigit():
+#     #             symbols.append(x)
+#     #
+#     #     try:
+#     #         ffratio = followers / following
+#     #     except ZeroDivisionError:
+#     #         ffratio = 0
+#     #
+#     #     try:
+#     #         frt_ratio = followers / totaltweets
+#     #     except ZeroDivisionError:
+#     #         frt_ratio = 0
+#     #
+#     #     # Here we are appending all the
+#     #     # extracted information in the DataFrame
+#     #     ith_tweet = [username,
+#     #                  user_id,
+#     #                  description,
+#     #                  location,
+#     #                  following,
+#     #                  followers,
+#     #                  ffratio,
+#     #                  frt_ratio,
+#     #                  totaltweets,
+#     #                  retweetcount,
+#     #                  text,
+#     #                  clean_tweet(text),
+#     #                  hashtext,
+#     #                  symbols,
+#     #                  id]
+#     #     db.loc[len(db)] = ith_tweet
+#     #
+#     #     # Function call to print tweet data on screen
+#     #     # printtweetdata(i, ith_tweet)
+#     #     c += 1
+#     return d
 
 
 def unified_logger_output(model_response=None, personality=None, nuance=None, mood=None, temp=None, model=None):
@@ -312,3 +313,10 @@ def unified_logger_output(model_response=None, personality=None, nuance=None, mo
     log_message += "-------------------------------"
 
     logger.info(log_message)
+
+def whoami():
+    frame = inspect.currentframe()
+    return inspect.getframeinfo(frame).function
+import sys
+def callersname():
+    return sys._getframe(2).f_code.co_name

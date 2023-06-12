@@ -10,7 +10,7 @@ def build_twitter_prompt(mood, question, nuance):
     prompt = " ".join(
         [
             f"respond to the text between the * signs *{clean_links(question)}* {mood} {nuance} and allways follow these rules:"]
-        + ["1. Use a MAXIMUM of 275 characters to answer!"]
+        + ["1. Use only a MAXIMUM of 275 characters!"]
         + config["twitter_reply_rules"][1:]
     )
     return {"prompt": prompt, "mood": mood, "nuance": nuance}
@@ -21,7 +21,7 @@ def build_twitter_promt_for_reply_mentions(mood, question, nuance):
     prompt = " ".join(
         [
             f"respond to the text between the * signs *{clean_links(question)}* {mood} {nuance} and allways follow these rules:"]
-        + ["1. Use a MAXIMUM of 275 characters to answer!"]
+        + ["1. Use only a MAXIMUM of 275 characters!"]
         + config["twitter_reply_rules"][1:]
     )
     return {"prompt": prompt, "mood": mood, "nuance": nuance}
@@ -31,7 +31,7 @@ def build_twitter_prompt_news(mood, question, nuance):
     question = unicodedata.normalize("NFKD", question)
     prompt = " ".join(
         [f"respond to the text between the * signs *{clean_links(question)}* {mood} {nuance} and allways follow these rules:"]
-        + ["1. Use a MAXIMUM of 260 characters to answer!"]
+        + ["1. Use only a MAXIMUM of 260 characters!"]
         + config["twitter_reply_rules"][1:]
     )
     return {"prompt": prompt, "mood": mood, "nuance": nuance}

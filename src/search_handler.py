@@ -1,18 +1,17 @@
 import random
+from datetime import datetime, timedelta
 from time import sleep
 from typing import Tuple
 
 from dotenv import dotenv_values
 from duckduckgo_search import DDGS
+from newsapi import NewsApiClient
 from serpapi import GoogleSearch, serp_api_client_exception
 
 from config import config
 from src.communication_handler import logger
-from src.helper import get_hash
+from src.helper import get_hash, callersname
 from src.pickle_handler import load_pickle, write_pickle
-from newsapi import NewsApiClient
-from datetime import datetime, timedelta
-
 
 # source https://github.com/deedy5/duckduckgo_search
 # Load environment variables from .env file
@@ -69,8 +68,7 @@ def get_news_api(search_term):
     try:
         search = GoogleSearch(params)
         results = search.get_dict()
-        if results[
-            "error"] == 'Your searches for the month are exhausted. You can upgrade plans on SerpApi.com website.':
+        if results["error"] == 'Your searches for the month are exhausted. You can upgrade plans on SerpApi.com website.':
             logger.info(results["error"])
             return "API limit reached"
     except serp_api_client_exception as e:
@@ -132,13 +130,15 @@ def get_news_news_api(search_term, type_: str):
                                                   category=category,
                                                   language='en',
                                                   country='us')
+        if top_headlines['totalResults'] == 0:
+            return None, None
         try:
             top_headlines = write_description_hash(top_headlines)
             top_headlines = write_search_term(top_headlines, search_term)
             top_headlines = write_body_text(top_headlines)
         except Exception as e:
-            logger.error(f"Got error in getting news: {e}")
-            top_headlines = None, None
+            logger.error(f"{callersname()} : Got error in getting news: {e}")
+            return None, None
 
         return top_headlines, category
 
@@ -156,14 +156,16 @@ def get_news_news_api(search_term, type_: str):
                                               language='en',
                                               sort_by='relevancy',
                                               page=1)
-
+        if all_articles['totalResults'] == 0:
+            return None, None
         try:
             all_articles = write_description_hash(all_articles)
             all_articles = write_search_term(all_articles, search_term)
             all_articles = write_body_text(all_articles)
         except Exception as e:
-            logger.error(f"Got error in getting news: {e}")
-            all_articles = None
+            logger.error(f"{callersname()} : Got error in getting news: {e}")
+            return None
+
         return all_articles
 
     if type_ == "source":
