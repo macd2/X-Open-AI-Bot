@@ -113,7 +113,10 @@ def write_body_text(response_):
             i["body"] = i["title"].split(" -")[0] + ". " + i["description"]
     return response_
 
-
+def filter_news():
+    #Todo be Implemented. filter out news where the discription is empty or where filter words appear
+    # filter words ["Pride", "LGBTQ+"]
+    pass
 newsapi = NewsApiClient(api_key=env['news_api_key'])
 def get_news_news_api(search_term, type_: str):
     if type_ == "top_headlines":
@@ -207,6 +210,7 @@ def returns_news_list_news_api(search_term: str, use_cache: bool, use_api=True, 
             r2 = all_articles["articles"]
 
         search_results = r1 + r2
+        search_results = [x for x in search_results if "pride" not in x["body"]]
         write_pickle(obj=search_results, filename=search_result_file_name)
         return search_results, search_term
 

@@ -1,6 +1,7 @@
 import random
 import re
 import time
+import unicodedata
 from time import sleep
 
 from src.communication_handler import logger
@@ -39,19 +40,21 @@ def reply_to_tweet_by_hashtag(hashtag, like, mood, nuance, ai_personality, model
             mood = "with an answer"
         prompt = build_twitter_prompt(mood=mood, question=tweet['full_text'], nuance=nuance)
 
-        response = ask_gpt(prompt=prompt, ai_personality=ai_personality, temperature=temperature, model=model,
-                           ability="reply_to_tweet_by_hashtag")
+        response = []
 
         # Post the reply
-        while len(response) > 280:
+        while len(response) > 280 or not response:
+            time.sleep(5)
             logger.info(f"reply_to_tweet_by_hashtag: Answer too long, regenerate Len: {len(response)}")
             response = ask_gpt(prompt=prompt, ai_personality=ai_personality, temperature=temperature, model=model,
                                ability="reply_to_tweet_by_hashtag")
-            time.sleep(2)
+            raw_response = response
+            response = replace_bad_hashtags(response)
 
         # Reply to the tweet
-        raw_response = response
-        response = replace_bad_hashtags(response)
+        if response == "NOT PASSED":
+            continue
+
         unified_logger_output(model_response=response, personality=ai_personality, nuance=nuance, mood=mood,
                               temp=temperature, model=model)
 
@@ -99,6 +102,7 @@ def reply_to_mentions(like, mood, nuance, ai_personality, temperature, model):
         logger.info(f"Reply to mention {cc}/{c}")
         # Check if the mention has already been answered in the database
         if sql_mention_already_answered(tweet['id']):
+            # ToDo collect all of this and send only one logger message with the total amount of already replied mentions
             logger.info(f"No action! Already replied to Mention: {tweet['id']}\n")
             cc += 1
             continue
@@ -115,18 +119,21 @@ def reply_to_mentions(like, mood, nuance, ai_personality, temperature, model):
 
             # Get the response from the GPT model
             logger.info(f"Get Response from: {model}")
-            response = ask_gpt(chat_log=chat_log, prompt=prompt, ai_personality=ai_personality, temperature=temperature,
-                               model=model, ability="reply_to_mentions")
+            response = []
             # Make sure the response length is within Twitter's limit
-            while len(response) > 280:
+            while len(response) > 280 or not response:
                 logger.info(f"Reply to mention: Response too long! Regenerating Len: {len(response)}")
                 response = ask_gpt(chat_log=chat_log, prompt=prompt, ai_personality=ai_personality,
                                    temperature=temperature,
                                    model=model, ability="reply_to_mentions")
+                response = remove_content_between_markers(text=response, start_marker="It's important", end_marker="#")
+                response = remove_content_between_markers(text=response, start_marker="Let's", end_marker="#")
+                response = tweak_gpt_outputs(gpt_response=response)
                 time.sleep(random.randrange(10, 20))
 
-            response = remove_content_between_markers(text=response, start_marker="It's important", end_marker="#")
-            response = tweak_gpt_outputs(gpt_response=response)
+            if response == "NOT PASSED":
+                continue
+
             logger.info(f"Reply to: {tweet['full_text']}")
             unified_logger_output(model_response=response, personality=ai_personality, nuance=nuance, mood=mood,
                                   temp=temperature, model=model)
@@ -188,18 +195,22 @@ def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, mode
                 logger.info("No action news already posted")
                 continue
 
-            logger.info('News: ' + body)
+            logger.info('News: ' + unicodedata.normalize("NFKD", body))
+            logger.info(f"Link: {v['url']}")
 
             prompt = build_twitter_prompt_news(question=body, mood=mood, nuance=nuance)
             response = []
 
             while len(response) > 260 or not response:
+                time.sleep(random.randrange(1, 5))
                 if response:
                     logger.info(f"Response too long. Regenerating. Len: {len(response)}")
                 response = ask_gpt(prompt=prompt, ai_personality=ai_personality, temperature=temperature, model=model,
                                    ability="post_news_tweet")
                 response = replace_bad_hashtags(response)
-                time.sleep(random.randrange(1, 5))
+
+            if response == "NOT PASSED":
+                continue
 
             tweet = f"{response} {v['url']}"
             unified_logger_output(model_response=response, personality=ai_personality, nuance=nuance, mood=mood,
