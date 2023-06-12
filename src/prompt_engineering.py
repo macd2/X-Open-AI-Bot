@@ -38,7 +38,7 @@ def build_twitter_prompt_news(mood, question, nuance):
     return {"prompt": prompt, "mood": mood, "nuance": nuance}
 
 
-def build_chat_log(prompt, ai_personality, replace_at_sings=False):
+def build_chat_log(prompt:str, ai_personality:str, replace_at_sings=False):
     if replace_at_sings:
         """Clean all @ signs before feeding to the model"""
         prompt = re.sub(r'(@)\S+', '', prompt)
@@ -71,7 +71,7 @@ def gpt_build_chat_log_conversation(newprompt, ai_personality, max_output_len, r
 
     chat_log = [{"role": "system", "content": ai_personality}]
     chat_log += history
-    chat_log.append({"role": "user", "content": newprompt})
+    chat_log.append({"role": "user", "content": clean_links(unicodedata.normalize("NFKD", newprompt))})
 
     params = {"mood": mood, "nuance": nuances, "max_output_len": max_output_len, "rules": rules}
 
