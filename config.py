@@ -133,7 +133,7 @@ config = dict(
     models=['gpt-3.5-turbo'],
     likes=[True, False],
 
-    gender_words=['Agender',
+    mood_filter_words=['Agender',
                   'Allosexual',
                   'Ally',
                   'Androgyne',
