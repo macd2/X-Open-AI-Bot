@@ -114,8 +114,6 @@ def write_body_text(response_):
     return response_
 
 def filter_news(response_, filter_words:list):
-    # Todo be Implemented. filter out news where the discription is empty or where filter words appear
-    # Filter words ["Pride", "LGBTQ+"]
     if response_["status"] == 'ok':
         if int(response_["totalResults"]) == 0:
             return None
@@ -154,7 +152,7 @@ def get_news_news_api(search_term, type_: str):
             top_headlines = write_description_hash(top_headlines)
             top_headlines = write_search_term(top_headlines, search_term)
             top_headlines = write_body_text(top_headlines)
-            top_headlines = filter_news(top_headlines, filter_words=["gay", "woman rights","LGBT", "Woman rights"])
+            top_headlines = filter_news(top_headlines, filter_words=["gay", "woman rights", "LGBT", "Woman rights"])
         except Exception as e:
             logger.error(f"{callersname()} : Got error in getting news: {e}")
             return None, None

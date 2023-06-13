@@ -2,50 +2,42 @@ import datetime
 import hashlib
 import math
 import re
+import sys
 from calendar import month_abbr
 from collections import Counter
-import inspect
-
-# import pandas as pd
 
 from src.communication_handler import logger
 
 
-def get_cosine(vec1, vec2):
-    intersection = set(vec1.keys()) & set(vec2.keys())
-    numerator = sum([vec1[x] * vec2[x] for x in intersection])
+def clean_model_output(gpt_response):
+    keywords = ["respectfully ", "It is important to ", "Possible response:", "I appreciate your response, but ",
+                "@_RussellEdwards", "I have to respectfully disagree with the text between the * signs.",
+                "Thanks for sharing", "Appreciate the share!"]
+    for i in keywords:
+        if i.lower() in gpt_response.lower():
+            logger.info(f"Replaced: {i}")
+            gpt_response = gpt_response.lower().replace(i.lower(), "")
+    return gpt_response
 
-    sum1 = sum([vec1[x] ** 2 for x in list(vec1.keys())])
-    sum2 = sum([vec2[x] ** 2 for x in list(vec2.keys())])
-    denominator = math.sqrt(sum1) * math.sqrt(sum2)
 
-    if not denominator:
-        return 0.0
+def model_not_comply_filter(answer):
+    if "I'm sorry" in answer and "AI" in answer and "I cannot".lower() in answer.lower():
+        logger.info("Model don't want to comply filter activated: I'm sorry, AI and I cannot in response")
+        return True
     else:
-        return float(numerator) / denominator
+        return False
 
 
-def text_to_vector(text):
-    word = re.compile(r"\w+")
-    words = word.findall(text)
-    return Counter(words)
-
-
-def get_cosine_similarity_score(text1, text2):
-    """A score higher than 0.5 indicates a high similarity"""
-    return get_cosine(text_to_vector(text1), text_to_vector(text2))
+def general_model_response_filter(filters, answer):
+    for x in filters:
+        if x.lower() in answer.lower():
+            logger.info(f"General Repose filter activate on: {x}")
+            return True
+    return False
 
 
 def find_hashtags(tweet):
     return re.findall("#([a-zA-Z0-9_]{1,50})", tweet)
-
-
-def find_mentions(tweet):
-    return re.findall("@([a-zA-Z0-9_]{1,50})", tweet)
-
-
-def clean_links(text):
-    return re.sub(r'http\S+', '', text)
 
 
 def remove_hashtags(tweet):
@@ -53,9 +45,20 @@ def remove_hashtags(tweet):
     return ' '.join(l)
 
 
-# def remove_symbols(tweet):
-#   l = [x for x in tweet.split() if "$" not in x and not x[1].isdigit()]
-#   return ' '.join(l)
+def find_mentions(tweet):
+    return re.findall("@([a-zA-Z0-9_]{1,50})", tweet)
+
+
+def remove_mentions_with_at_sign(text):
+    """Clean all @ signs before feeding to the model"""
+    text = re.sub(r'(@)\S+', '', text)
+    text = re.sub(r'\s+', ' ', text)
+    return text
+
+
+def clean_links(text):
+    return re.sub(r'http\S+', '', text)
+
 
 def remove_symbols(tweet):
     l = []
@@ -65,79 +68,12 @@ def remove_symbols(tweet):
     return ' '.join(l)
 
 
-def remove_mentions(tweet):
-    l = [x for x in tweet.split() if "@" not in x]
-    return ' '.join(l)
-
-
 def clean_tweet(tweet):
     tweet = clean_links(tweet)
     tweet = remove_symbols(tweet)
     tweet = remove_hashtags(tweet)
-    tweet = remove_mentions(tweet)
+    tweet = remove_mentions_with_at_sign(tweet)
     return tweet
-
-
-def df_to_dict(df):
-    # drop na to avoid errors
-    df.dropna(inplace=True)
-    # converting to dict
-    return df.to_dict(orient='index')
-
-
-def filter_tweets(df):
-    tweets_to_consider = []
-    d = df_to_dict(df)
-    for k, v in d.items():
-        c = f'{v["text"]}'
-        t = [
-            v["ffratio"] < 1,
-            v["totaltweets"] > 100,
-            v["followers"] > 100,
-            v["followers"] / v["totaltweets"] > 0.023,
-            3 < v["retweetcount"] < 100,
-            len(c) > 100,
-            "rt" not in c.lower(),
-            "follow" not in c.lower(),
-            "tag" not in c.lower(),
-            "airdrop" not in c.lower(),
-            "giveaway" not in c.lower(),
-        ]
-        if sum(t) == len(t):
-            tweets_to_consider.append(v)
-
-    return tweets_to_consider
-
-
-def convert_sec(seconds):
-    seconds = seconds % (24 * 3600)
-    hour = seconds // 3600
-    seconds %= 3600
-    # minutes = seconds // 60
-    seconds %= 60
-    return hour
-
-
-def get_month_int_by_name(month):
-    for k, v in enumerate(month_abbr):
-        if v.lower() == month.lower():
-            return k
-
-
-def convert_tweepy_created_date_to_datetime(created_at):
-    t2 = created_at.split(" ")
-    t3 = f"{t2[-1]}-{get_month_int_by_name(t2[1])}-{t2[2]} {t2[3]}"
-    # The format
-    format_ = '%Y-%m-%d %H:%M:%S'
-    datetime_str = datetime.datetime.strptime(t3, format_)
-    return datetime_str
-
-
-def get_hash(text):
-    text = str(text)
-    h = hashlib.new('sha256')  # sha256 can be replaced with different algorithms
-    h.update(text.encode())  # give an encoded string.
-    return h.hexdigest()
 
 
 def replace_bad_hashtags(text: str):
@@ -148,16 +84,17 @@ def replace_bad_hashtags(text: str):
         "#sarcastic": "",
         "#motivation": "",
         "#skepticism": "",
-        "#toxicmasculinity":"",
-        "skeptical":"",
+        "#toxicmasculinity": "",
+        "skeptical": "",
         "sceptical": "",
-        "patience":"",
-        "@_RussellEdwards":""
+        "patience": "",
+        "@_RussellEdwards": ""
     }
 
     for bad_hashtag, replacement in hashtag_mappings.items():
-        text= text.lower().replace(bad_hashtag.lower(), replacement)
+        text = text.lower().replace(bad_hashtag.lower(), replacement)
     return text
+
 
 def replace_longest_hashtag(string, replacement=""):
     hashtag_words = [word for word in string.replace("#", " #").split() if word.startswith('#')]
@@ -167,6 +104,8 @@ def replace_longest_hashtag(string, replacement=""):
     longest_word = max(hashtag_words, key=len)
     replaced_string = string.replace(longest_word, replacement)
     return " ".join(replaced_string.split())
+
+
 def remove_content_between_markers(text, start_marker, end_marker):
     start_index = text.find(start_marker)
     end_index = text.find(end_marker)
@@ -176,10 +115,12 @@ def remove_content_between_markers(text, start_marker, end_marker):
 
     return text[:start_index] + text[end_index:]
 
+
 def get_content_between_markers(text, start_marker, end_marker):
     startpos = text.find(start_marker) + len(start_marker)
     endpos = text.find(end_marker, startpos)
     return text[startpos:endpos].strip()
+
 
 def filter_tweets_from_response(returned_status, min_text_len=70):
     tweets_to_consider = []
@@ -219,98 +160,64 @@ def filter_tweets_from_response(returned_status, min_text_len=70):
     return tweets_to_consider
 
 
-# def df_from_tweepy_response(returned_status):
-#     # takes a twitter courser object
-#     # Creating DataFrame using pandas
-#     # db = pd.DataFrame(columns=['username',
-#     #                            "user_id",
-#     #                            'description',
-#     #                            'location',
-#     #                            'following',
-#     #                            'followers',
-#     #                            'ffratio',  # followers / following
-#     #                            'frt_ratio',  # followers / total-tweets
-#     #                            'totaltweets',
-#     #                            'retweetcount',
-#     #                            'text',
-#     #                            'cleanedtext',
-#     #                            'hashtags',
-#     #                            'symbols',
-#     #                            'id'])
-#
-#     list_tweets = [tweet for tweet in returned_status]
-#     a = [tweet._json for tweet in list_tweets]
-#     d = pd.DataFrame(a)
-#
-#     # # Counter to maintain Tweet Count
-#     # c = 1
-#     #
-#     # # we will iterate over each tweet in the
-#     # # list for extracting information about each tweet
-#     # for tweet in list_tweets:
-#     #     username = tweet.user.screen_name
-#     #     user_id = tweet.user.id
-#     #     description = tweet.user.description
-#     #     location = tweet.user.location
-#     #     following = tweet.user.friends_count
-#     #     followers = tweet.user.followers_count
-#     #     totaltweets = tweet.user.statuses_count
-#     #     retweetcount = tweet.retweet_count
-#     #     hashtags = tweet.entities['hashtags']
-#     #     id = tweet.id
-#     #     # replied_tweet = tweet.replied_tweets
-#     #
-#     #     # Retweets can be distinguished by
-#     #     # a retweeted_status attribute,
-#     #     # in case it is an invalid reference,
-#     #     # except block will be executed
-#     #
-#     #     try:
-#     #         text = tweet.retweeted_status.full_text
-#     #     except AttributeError:
-#     #         text = tweet.full_text
-#     #     hashtext = list()
-#     #     for j in range(0, len(hashtags)):
-#     #         hashtext.append(hashtags[j]['text'])
-#     #
-#     #     symbols = []
-#     #     for x in text.split():
-#     #         if len(x) > 1 and "$" in x and not x[1].isdigit():
-#     #             symbols.append(x)
-#     #
-#     #     try:
-#     #         ffratio = followers / following
-#     #     except ZeroDivisionError:
-#     #         ffratio = 0
-#     #
-#     #     try:
-#     #         frt_ratio = followers / totaltweets
-#     #     except ZeroDivisionError:
-#     #         frt_ratio = 0
-#     #
-#     #     # Here we are appending all the
-#     #     # extracted information in the DataFrame
-#     #     ith_tweet = [username,
-#     #                  user_id,
-#     #                  description,
-#     #                  location,
-#     #                  following,
-#     #                  followers,
-#     #                  ffratio,
-#     #                  frt_ratio,
-#     #                  totaltweets,
-#     #                  retweetcount,
-#     #                  text,
-#     #                  clean_tweet(text),
-#     #                  hashtext,
-#     #                  symbols,
-#     #                  id]
-#     #     db.loc[len(db)] = ith_tweet
-#     #
-#     #     # Function call to print tweet data on screen
-#     #     # printtweetdata(i, ith_tweet)
-#     #     c += 1
-#     return d
+def get_hash(text):
+    text = str(text)
+    h = hashlib.new('sha256')  # sha256 can be replaced with different algorithms
+    h.update(text.encode())  # give an encoded string.
+    return h.hexdigest()
+
+
+def convert_sec(seconds):
+    seconds = seconds % (24 * 3600)
+    hour = seconds // 3600
+    seconds %= 3600
+    # minutes = seconds // 60
+    seconds %= 60
+    return hour
+
+
+def get_month_int_by_name(month):
+    for k, v in enumerate(month_abbr):
+        if v.lower() == month.lower():
+            return k
+
+
+def convert_tweepy_created_date_to_datetime(created_at):
+    t2 = created_at.split(" ")
+    t3 = f"{t2[-1]}-{get_month_int_by_name(t2[1])}-{t2[2]} {t2[3]}"
+    # The format
+    format_ = '%Y-%m-%d %H:%M:%S'
+    datetime_str = datetime.datetime.strptime(t3, format_)
+    return datetime_str
+
+
+def get_cosine(vec1, vec2):
+    intersection = set(vec1.keys()) & set(vec2.keys())
+    numerator = sum([vec1[x] * vec2[x] for x in intersection])
+
+    sum1 = sum([vec1[x] ** 2 for x in list(vec1.keys())])
+    sum2 = sum([vec2[x] ** 2 for x in list(vec2.keys())])
+    denominator = math.sqrt(sum1) * math.sqrt(sum2)
+
+    if not denominator:
+        return 0.0
+    else:
+        return float(numerator) / denominator
+
+
+def text_to_vector(text):
+    word = re.compile(r"\w+")
+    words = word.findall(text)
+    return Counter(words)
+
+
+def get_cosine_similarity_score(text1, text2):
+    """A score higher than 0.5 indicates a high similarity"""
+    return get_cosine(text_to_vector(text1), text_to_vector(text2))
+
+
+def callersname():
+    return f"{sys._getframe(2).f_code.co_name}".upper()
 
 
 def unified_logger_output(model_response=None, personality=None, nuance=None, mood=None, temp=None, model=None):
@@ -332,8 +239,3 @@ def unified_logger_output(model_response=None, personality=None, nuance=None, mo
     log_message += "-------------------------------"
 
     logger.info(log_message)
-
-
-import sys
-def callersname():
-    return f"{sys._getframe(2).f_code.co_name}".upper()

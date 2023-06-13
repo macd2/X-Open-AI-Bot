@@ -1,65 +1,22 @@
-import re
 import unicodedata
 
-from config import config
+import config
 from src.helper import clean_links
 
 
-def build_twitter_prompt(mood, question, nuance):
-    question = unicodedata.normalize("NFKD", question)
-    prompt = " ".join(
-        [
-            f"respond to the text between the * signs *{clean_links(question)}* {mood} {nuance} and allways follow these rules:"]
-        + ["1. respond with a tweet with a MAXIMUM of 275 characters!"]
-        + config["twitter_reply_rules"][1:]
-    )
-    return {"prompt": prompt, "mood": mood, "nuance": nuance}
+def mood_generator(question, mood, filter_words=None):
+    if not filter_words:
+        filter_words = config.config["mood_filter_words"]
 
+    filter_words = [x.lower() for x in filter_words]
+    if not set(question.replace("#", "").lower().split()).isdisjoint(filter_words):
+        return "as if you where sarcastic, pretend to be extremely arrogant"
+    else:
+        return mood
 
-def build_twitter_promt_for_reply_mentions(mood, question, nuance):
-    question = unicodedata.normalize("NFKD", question)
-    prompt = " ".join(
-        [
-            f"respond to the text between the * signs *{clean_links(question)}* {mood} {nuance} and allways follow these rules:"]
-        + ["1. Use only a MAXIMUM of 275 characters!"]
-        + config["twitter_reply_rules"][1:]
-    )
-    return {"prompt": prompt, "mood": mood, "nuance": nuance}
+def gpt_build_chat_log_conversation(newprompt: str, ai_personality: str, max_output_len: int, rules, mood: str,                                    nuances: str):
+    mood = mood_generator(newprompt, mood)
 
-
-def build_twitter_prompt_news(mood, question, nuance):
-    question = unicodedata.normalize("NFKD", question)
-    prompt = " ".join(
-        [
-            f"respond to the text between the * signs *{clean_links(question)}* {mood} {nuance} and allways follow these rules:"]
-        + ["1. Use only a MAXIMUM of 260 characters!"]
-        + config["twitter_reply_rules"][1:]
-    )
-    return {"prompt": prompt, "mood": mood, "nuance": nuance}
-
-
-def build_chat_log(prompt:str, ai_personality:str, replace_at_sings=False):
-    if replace_at_sings:
-        """Clean all @ signs before feeding to the model"""
-        prompt = re.sub(r'(@)\S+', '', prompt)
-        prompt = re.sub(r'\s+', ' ', prompt)
-
-    chat_log = [
-        {"role": "system", "content": ai_personality},
-        {"role": "user", "content": prompt},
-        # {"role": "assistant", "content": "The Los Angeles Dodgers won the World Series in 2020."},
-    ]
-    return chat_log
-
-
-def clean_chat_log_input(text):
-    """Clean all @ signs before feeding to the model"""
-    text = re.sub(r'(@)\S+', '', text)
-    text = re.sub(r'\s+', ' ', text)
-    return text
-
-
-def gpt_build_chat_log_conversation(newprompt, ai_personality, max_output_len, rules, mood, nuances, role="user"):
     history = [
         {"role": "user",
          "content": f"i will give you a text and i want you to respond {mood} and {nuances} and with not more than {max_output_len} characters respond with OK when you are ready!"},
@@ -78,19 +35,17 @@ def gpt_build_chat_log_conversation(newprompt, ai_personality, max_output_len, r
     return chat_log, params
 
 
-# def gpt_build_chat_log_conversation(reply, replied_to_text, ai_personality):
-#     """Clean all @ signs before feeding to the model"""
-#     reply = re.sub(r'(@)\S+', '', reply)
-#     reply = re.sub(r'\s+', ' ', reply)
-#     replied_to_text = re.sub(r'(@)\S+', '', replied_to_text)
-#
-#     chat_log = [
-#         {"role": "system", "content": ai_personality},
-#         {"role": "assistant", "content": f"{replied_to_text}"},
-#         {"role": "user",
-#          "content": f"respond to text after the : sign and don't use more than 275 characters: {reply}"}
-#     ]
-#     return chat_log
+def gpt_build_chat_log_continue_conversation(chatlog_history: list, new_responses: list):
+    # input example
+    # new_responses = [{"role": "assistant", "content": "this is the model response"},
+    #                  {"role": "user", "content": "this is the user response on the model response"}]
+
+    for i in new_responses:
+        chatlog_history.append(
+            {"role": f'{i["role"]}', "content": clean_links(unicodedata.normalize("NFKD", i["content"]))})
+
+    return chatlog_history
+
 
 good_combos = [
     {
