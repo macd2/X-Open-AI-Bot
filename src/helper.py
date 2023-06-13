@@ -12,7 +12,7 @@ from src.communication_handler import logger
 def clean_model_output(gpt_response):
     keywords = ["respectfully ", "It is important to ", "Possible response:", "I appreciate your response, but ",
                 "@_RussellEdwards", "I have to respectfully disagree with the text between the * signs.",
-                "Thanks for sharing", "Appreciate the share!"]
+                "Thanks for sharing", "Appreciate the share!", "Thanks for sharing!"]
     for i in keywords:
         if i.lower() in gpt_response.lower():
             logger.info(f"Replaced: {i}")
@@ -75,6 +75,29 @@ def clean_tweet(tweet):
     tweet = remove_mentions_with_at_sign(tweet)
     return tweet
 
+
+def get_text_hastag_ratio(text):
+    i = clean_links(' '.join(text.split()))
+    i = remove_mentions_with_at_sign(i)
+    i = remove_symbols(i)
+
+    b = " ".join(find_hashtags(i))
+    if len(b) == 0:
+        return 1
+    a = remove_hashtags(i)
+    if len(a) == 0:
+        return False
+
+    return (len(a.split(" ")) / len(b.split(" "))) / 10
+
+
+def check_text_hastag_ratio(text):
+    # accatable ratio is 0.5 and above
+    a = get_text_hastag_ratio(text=text)
+    if a and a > 0.5:
+        return True
+    else:
+        return False
 
 def replace_bad_hashtags(text: str):
     hashtag_mappings = {
@@ -180,7 +203,10 @@ def get_month_int_by_name(month):
     for k, v in enumerate(month_abbr):
         if v.lower() == month.lower():
             return k
-
+def get_date_for_days_delata_from_today(days_delta):
+    date_since = datetime.today() - datetime.timedelta(days=days_delta)
+    date_since = date_since.strftime('%Y-%m-%d')
+    return date_since
 
 def convert_tweepy_created_date_to_datetime(created_at):
     t2 = created_at.split(" ")

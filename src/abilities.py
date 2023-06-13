@@ -6,7 +6,8 @@ from time import sleep
 
 import config
 from src.communication_handler import logger
-from src.helper import callersname, clean_links, clean_model_output, get_cosine_similarity_score, get_hash, \
+from src.helper import callersname, check_text_hastag_ratio, clean_links, clean_model_output, \
+    get_cosine_similarity_score, get_hash, \
     remove_content_between_markers, \
     replace_bad_hashtags, replace_longest_hashtag, unified_logger_output
 from src.open_ai_handler import ask_gpt
@@ -36,6 +37,10 @@ def reply_to_tweet_by_hashtag(hashtag, like, mood, nuance, ai_personality, model
     for tweet in filtered_tweets:
         logger.info(f"Reply to Tweet by Hashtag {c}/{n_posts}")
         if sql_check_text_already_replied(tweet["full_text_hash"]):
+            continue
+
+        if not check_text_hastag_ratio(text=tweet["full_text"]):
+            logger.info(f"Hashtag to text ratio not passed")
             continue
 
         if "have questions" in tweet['full_text'].lower() or "have a question" in tweet['full_text'].lower():

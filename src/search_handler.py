@@ -10,7 +10,7 @@ from serpapi import GoogleSearch, serp_api_client_exception
 
 from config import config
 from src.communication_handler import logger
-from src.helper import get_hash, callersname
+from src.helper import callersname, get_hash
 from src.pickle_handler import load_pickle, write_pickle
 
 # source https://github.com/deedy5/duckduckgo_search
@@ -68,7 +68,8 @@ def get_news_api(search_term):
     try:
         search = GoogleSearch(params)
         results = search.get_dict()
-        if results["error"] == 'Your searches for the month are exhausted. You can upgrade plans on SerpApi.com website.':
+        if results[
+            "error"] == 'Your searches for the month are exhausted. You can upgrade plans on SerpApi.com website.':
             logger.info(results["error"])
             return "API limit reached"
     except serp_api_client_exception as e:
@@ -113,16 +114,20 @@ def write_body_text(response_):
             i["body"] = i["title"].split(" -")[0] + ". " + i["description"]
     return response_
 
-def filter_news(response_, filter_words:list):
+
+def filter_news(response_, filter_words: list):
     if response_["status"] == 'ok':
         if int(response_["totalResults"]) == 0:
             return None
 
-        response_["articles"] = [i for i in response_["articles"] if all(keyword not in i["body"] for keyword in filter_words)]
+        response_["articles"] = [i for i in response_["articles"] if
+                                 all(keyword not in i["body"] for keyword in filter_words)]
         return response_
 
 
 newsapi = NewsApiClient(api_key=env['news_api_key'])
+
+
 def get_news_news_api(search_term, type_: str):
     if type_ == "top_headlines":
         # /v2/top-headlines
@@ -131,16 +136,17 @@ def get_news_news_api(search_term, type_: str):
             category = 'business'
         elif search_term in ['Discoveries']:
             category = random.choice([
-                                  'science',
-                                  'technology'])
+                # 'science',
+                "general",
+                'technology'])
         else:
-            category = 'business',   # ['business',
-                                      #'entertainment',
-                                      # 'general',
-                                      # 'health',
-                                      # 'science',
-                                      # 'sports',
-                                      # 'technology']
+            category = 'business',  # ['business',
+            # 'entertainment',
+            # 'general',
+            # 'health',
+            # 'science',
+            # 'sports',
+            # 'technology']
         logger.info(f"Using search term: {search_term} and category: {category}")
         top_headlines = newsapi.get_top_headlines(q=search_term,  # 'bitcoin',
                                                   category=category,

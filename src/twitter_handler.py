@@ -157,9 +157,8 @@ def delete_tweet(tweet_id):
 #         print(tweet)
 # function to perform data extraction
 
-def get_tweet_by_hashtag(hashtag: str, since_days, num_tweets=100):
-    date_since = datetime.today() - timedelta(days=since_days)
-    date_since = date_since.strftime('%Y-%m-%d')  # format yyyy-mm--dd
+def get_tweet_by_hashtag(hashtag: str, num_tweets=10):
+     # format yyyy-mm--dd
 
     # We are using .Cursor() to search
     # through Twitter for the required tweets.
@@ -175,26 +174,23 @@ def get_tweet_by_hashtag(hashtag: str, since_days, num_tweets=100):
     #Example To User and From User
     # QUERY = "from:user to:user"
     #Example for Attitudes just add a :) for positive or :( for negative tweets
-    QUERY = ""
+
+    QUERY = f"#{hashtag} -filter:retweets -filter:reply"
+    logger.info(f"Get tweets for {QUERY}")
+
     try:
         tweets = tweepy.Cursor(api_.search_tweets,
-                               f"#{hashtag} -filter:retweets -filter:reply",
-                               result_type="popular",
-                               #result_type="recent",
+                               QUERY,
+                               # result_type="popular",
+                               result_type="recent",
                                lang="en",
-                               count=num_tweets,
-                               since_id=date_since,
+                               count=10,
+                               # since_id=tweet_id,
                                tweet_mode='extended').items()
     except Exception as e:
         logger.error(f"{callersname()} :Got error: {e}")
         logger.info("Retry")
-        time.sleep(10)
-        tweets = tweepy.Cursor(api_.search_tweets,
-                               hashtag,
-                               lang="en",
-                               since_id=date_since,
-                               tweet_mode='extended').items(num_tweets)
-
+        pass
     # if return_df:
     #     return df_from_tweepy_response(returned_status=tweets)
     # else:
@@ -251,7 +247,7 @@ def get_tweets_and_filter(use_cached_tweets, hashtag):
     # if no tweets found
     while not filtered_tweets:
         time.sleep(random.randrange(10, 20))
-        tweepy_response = get_tweet_by_hashtag(hashtag=hashtag, since_days=3, num_tweets=500)
+        tweepy_response = get_tweet_by_hashtag(hashtag=hashtag, num_tweets=500)
         filtered_tweets = filter_tweets_from_response(tweepy_response, min_text_len=70)
         if not filtered_tweets:
             logger.info(f"Found no Tweets for Hashtag: {hashtag}")
