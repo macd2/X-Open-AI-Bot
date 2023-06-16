@@ -47,7 +47,7 @@ def reply_to_tweet_by_hashtag(hashtag, like, mood, nuance, ai_personality, model
             mood = "with an answer"
 
         # prompt = build_twitter_prompt(mood=mood, question=tweet['full_text'], nuance=nuance)
-        chat_log, params = gpt_build_chat_log_conversation(newprompt=unicodedata.normalize("NFKD", tweet['full_text']),
+        chat_log, params = gpt_build_chat_log_conversation(newprompt= tweet['full_text'],
                                                            ai_personality=ai_personality,
                                                            max_output_len=max_response_len,
                                                            rules=config.config["twitter_reply_rules_V2"], mood=mood,
@@ -218,87 +218,101 @@ def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, mode
     news_api_news, search_term = returns_news_list_news_api(search_term=search_term, use_cache=use_cache, use_api=True,
                                                             hrs_since_news=8)
     if not news_api_news:
+        logger.info(f"No News found most probably the API limit reached")
         # This only happens when the api limit is reached
         return
+
     last_ten_posts = [x[0] for x in sql_get_n_latest_records(table_name='timeline_posts', column_name="body", n=10)]
+    c = 0
+    while True:
+        if c > 5:
+            logger.info(f"No news after {c} Tries, Quit")
+            break
 
-    result_list = [v for v in news_api_news if
-                   all(get_cosine_similarity_score(text1=v["body"], text2=i) <= 0.45 for i in last_ten_posts)]
+        c += 1
+        time.sleep(random.randrange(2,5))
 
-    if not result_list:
-        news_api_news, search_term = return_news_list(search_term=search_term, use_cache=False, use_api=True,
-                                                      hrs_since_news=8)
         result_list = [v for v in news_api_news if
                        all(get_cosine_similarity_score(text1=v["body"], text2=i) <= 0.45 for i in last_ten_posts)]
 
-    if result_list:
-        for v in result_list:
-            if randomize:
-                v = random.choice(result_list)
+        if not result_list:
 
-            body = v["body"]
+            logger.info(f"No Results from News Search API: {result_list}")
 
-            if sql_news_already_posted(get_hash(v["description"]), url=v["url"]):
-                logger.info("No action news already posted")
-                continue
+            news_api_news, search_term = return_news_list(search_term=search_term, use_cache=False, use_api=True,
+                                                          hrs_since_news=8)
+            result_list = [v for v in news_api_news if
+                           all(get_cosine_similarity_score(text1=v["body"], text2=i) <= 0.45 for i in last_ten_posts)]
 
-            logger.info('News: ' + unicodedata.normalize("NFKD", body))
-            logger.info(f"Link: {v['url']}")
+        if result_list:
+            for v in result_list:
 
-            # prompt = build_twitter_prompt_news(question=body, mood=mood, nuance=nuance)
-            chat_log, params = gpt_build_chat_log_conversation(newprompt=body, ai_personality=ai_personality,
-                                                               max_output_len=max_response_len,
-                                                               rules=config.config["twitter_reply_rules_V2"], mood=mood,
-                                                               nuances=nuance)
-            response = []
-            l_count = 0
-            max_l_count = 4
+                if randomize:
+                    v = random.choice(result_list)
 
-            while len(response) > max_response_len or not response:
-                time.sleep(random.randrange(1, 5))
-                if response:
-                    logger.info(f"{callersname()} : Response too long. Regenerating. Len: {len(response)}")
-                response = ask_gpt(chat_log=chat_log, ai_personality=ai_personality, temperature=temperature,
-                                   model=model,
-                                   ability="post_news_tweet", params=params)
-                response = replace_bad_hashtags(response)
+                body = v["body"]
 
-                if len(response) > max_response_len:
-                    response = replace_longest_hashtag(response, replacement="")
+                if sql_news_already_posted(get_hash(v["description"]), url=v["url"]):
+                    logger.info("No action news already posted")
+                    continue
 
-                l_count += 1
-                if l_count == max_l_count:
-                    logger.info(f"{callersname()} : Response remains to long tried {l_count} times Skipping")
-                    break
+                logger.info('News: ' + unicodedata.normalize("NFKD", body))
+                logger.info(f"Link: {v['url']}")
 
-            if response == "NOT PASSED" or l_count == max_l_count:
-                continue
+                # prompt = build_twitter_prompt_news(question=body, mood=mood, nuance=nuance)
+                chat_log, params = gpt_build_chat_log_conversation(newprompt=body, ai_personality=ai_personality,
+                                                                   max_output_len=max_response_len,
+                                                                   rules=config.config["twitter_reply_rules_V2"], mood=mood,
+                                                                   nuances=nuance)
+                response = []
+                l_count = 0
+                max_l_count = 4
 
-            tweet = f"{response} {v['url']}"
-            unified_logger_output(model_response=response, personality=ai_personality, nuance=nuance, mood=mood,
-                                  temp=temperature, model=model)
+                while len(response) > max_response_len or not response:
+                    time.sleep(random.randrange(1, 5))
+                    if response:
+                        logger.info(f"{callersname()} : Response too long. Regenerating. Len: {len(response)}")
+                    response = ask_gpt(chat_log=chat_log, ai_personality=ai_personality, temperature=temperature,
+                                       model=model,
+                                       ability="post_news_tweet", params=params)
+                    response = replace_bad_hashtags(response)
 
-            logger.info("Sending Post...")
-            status, error = post_a_tweet(tweet)
+                    if len(response) > max_response_len:
+                        response = replace_longest_hashtag(response, replacement="")
 
-            if error != 200:
-                logger.error(f"Sending not successful. Got: {error}")
-            else:
-                logger.info(f"In response to: {body}")
-                logger.info(f"Tweet: {tweet}")
+                    l_count += 1
+                    if l_count == max_l_count:
+                        logger.info(f"{callersname()} : Response remains to long tried {l_count} times Skipping")
+                        break
 
-            post_data = {
-                "search_term": search_term,
-                "body": body,
-                "news_date": v["publishedAt"],
-                "description_hash": v["description_hash"],
-                "input_text_url": v['url'],
-                "output_text": response,
-                "post_tweet_id": None if error != 200 else status.id,
-                "status": str(error)
-            }
-            sql_write_timeline_posts(post_data=post_data)
-            break
+                if response == "NOT PASSED" or l_count == max_l_count:
+                    continue
+
+                tweet = f"{response} {v['url']}"
+                unified_logger_output(model_response=response, personality=ai_personality, nuance=nuance, mood=mood,
+                                      temp=temperature, model=model)
+
+                logger.info("Sending Post...")
+                status, error = post_a_tweet(tweet)
+
+                if error != 200:
+                    logger.error(f"{callersname()}: Sending not successful. Got: {error}")
+                else:
+                    logger.info(f"In response to: {body}")
+                    logger.info(f"Tweet: {tweet}")
+
+                post_data = {
+                    "search_term": search_term,
+                    "body": body,
+                    "news_date": v["publishedAt"],
+                    "description_hash": v["description_hash"],
+                    "input_text_url": v['url'],
+                    "output_text": response,
+                    "post_tweet_id": None if error != 200 else status.id,
+                    "status": str(error)
+                }
+                sql_write_timeline_posts(post_data=post_data)
+                break
 
 # def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, model, use_cache=True):
 #     logger.info(f"Use Search term: {search_term}")

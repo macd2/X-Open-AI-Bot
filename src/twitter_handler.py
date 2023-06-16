@@ -7,7 +7,7 @@ from dotenv import dotenv_values
 
 from config import config
 from src.communication_handler import logger
-from src.helper import callersname, clean_links, filter_tweets_from_response, get_hash
+from src.helper import callersname, clean_links, clean_twee_before_potst, filter_tweets_from_response, get_hash
 from src.pickle_handler import load_pickle, write_pickle
 from src.sql_handler import sql_already_in_db, sql_write_mentions_meta
 
@@ -40,65 +40,6 @@ def create_api():
 api_ = create_api()
 
 
-
-
-
-def get_mention_replies(tweet_id):
-    replies = []
-
-    # Get the original tweet
-    original_tweet = api_.get_status(tweet_id, tweet_mode='extended')
-    replies.append(original_tweet)
-
-    # Get replies to the original tweet
-    for reply in tweepy.Cursor(api_.search_tweets, q=f'to:{original_tweet.user.screen_name}',since_id=original_tweet.id_str,
-                               tweet_mode='extended').items():
-        if hasattr(reply, 'in_reply_to_status_id_str'):
-            if reply.in_reply_to_status_id_str == original_tweet.id_str:
-                replies.append(reply)
-
-    # this is to make the relies the parrent tweet and than repeat the prevouse operation not working yet
-    # for reply in replies:
-    #     for reply in tweepy.Cursor(api_.search_tweets, q=f'to:{reply.user.screen_name}',
-    #                                since_id=original_tweet.id_str,
-    #                                tweet_mode='extended').items():
-    #         if hasattr(reply, 'in_reply_to_status_id_str'):
-    #             if reply.in_reply_to_status_id_str == reply.id_str:
-    #                 replies.append(reply)
-
-    # Get replies to each reply
-    for i in range(1, len(replies)):
-        reply = replies[i]
-        for sub_reply in tweepy.Cursor(api_.search_tweets, q=f'to:{reply.user.screen_name}', since_id=reply.id_str,
-                                       tweet_mode='extended').items():
-            if hasattr(sub_reply, 'in_reply_to_status_id_str'):
-                if sub_reply.in_reply_to_status_id_str == reply.id_str:
-                    replies.append(sub_reply)
-
-    return replies
-
-def build_chat_log_format_from_mentions(tweet_id):
-    replies = get_mention_replies(tweet_id)
-    new_responses = []
-    # new_responses = [{"role": "assistant", "content": "this is the model response"},
-    #                  {"role": "user", "content": "this is the user response on the model response"}]
-    roles = ["assistant","user"]
-    for reply in replies:
-        if reply.in_reply_to_screen_name == '_RussellEdwards':
-            role = roles[1]
-        else:
-            role = roles[0]
-        new_responses.append({"role": f"{role}", "content": f"{reply.full_text}"})
-        #print(reply.id_str, reply.full_text)
-        #print()
-    return new_responses
-
-# ToDo get hsi to work so i can feed ful conversations to chat gpt
-# tweet_id = '1665042946368872450'
-# new_promt = build_chat_log_format_from_mentions(tweet_id)
-# a =1
-
-
 def fetch_tweet(ids: list):
     ids = [str(i) for i in ids]
     return [x._json for x in api_.lookup_statuses(ids)]
@@ -122,8 +63,9 @@ def post_a_tweet(tweet: str):
     error = 200
     status = None
     try:
-        status = api_.update_status(status=tweet)
-    except Exception as e:
+        status = api_.update_status(status=clean_twee_before_potst(tweet))
+    except tweepy.errors.TweepyException as e:
+        logger.error(f"{callersname()}: Got error: {e}")
         error = e
     return status, error
 

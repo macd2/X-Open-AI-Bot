@@ -234,8 +234,13 @@ def returns_news_list_news_api(search_term: str, use_cache: bool, use_api=True, 
             r2 = all_articles["articles"]
 
         search_results = r1 + r2
-        search_results = [x for x in search_results if "LGBT" not in x["body"]]
+        search_results = [x for x in search_results if "LBGT" not in x["body"]]
+
+        if not search_results:
+            continue
+
         write_pickle(obj=search_results, filename=search_result_file_name)
+
         return search_results, search_term
 
 

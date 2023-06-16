@@ -5,6 +5,7 @@ import re
 import sys
 from calendar import month_abbr
 from collections import Counter
+from string import punctuation
 
 from src.communication_handler import logger
 
@@ -21,7 +22,7 @@ def clean_model_output(gpt_response):
 
 
 def model_not_comply_filter(answer):
-    if "I'm sorry" in answer and "AI" in answer and "I cannot".lower() in answer.lower():
+    if "AI" in answer and "I cannot".lower() in answer.lower():
         logger.info("Model don't want to comply filter activated: I'm sorry, AI and I cannot in response")
         return True
     else:
@@ -144,6 +145,8 @@ def get_content_between_markers(text, start_marker, end_marker):
     endpos = text.find(end_marker, startpos)
     return text[startpos:endpos].strip()
 
+def clean_twee_before_potst(tweet_text):
+    return tweet_text.lstrip(punctuation)
 
 def filter_tweets_from_response(returned_status, min_text_len=70):
     tweets_to_consider = []
