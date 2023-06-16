@@ -83,10 +83,9 @@ def get_text_hastag_ratio(text):
     i = remove_symbols(i)
 
     b = " ".join(find_hashtags(i))
-    if len(b) == 0:
-        return 1
     a = remove_hashtags(i)
-    if len(a) == 0:
+
+    if len(a) < 20:
         return False
 
     return (len(a.split(" ")) / len(b.split(" "))) / 10
