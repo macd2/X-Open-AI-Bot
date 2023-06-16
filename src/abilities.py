@@ -224,7 +224,9 @@ def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, mode
 
     last_ten_posts = [x[0] for x in sql_get_n_latest_records(table_name='timeline_posts', column_name="body", n=10)]
     c = 0
-    while True:
+    post_complete = False
+
+    while True and not post_complete:
         if c > 5:
             logger.info(f"No news after {c} Tries, Quit")
             break
@@ -312,7 +314,9 @@ def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, mode
                     "status": str(error)
                 }
                 sql_write_timeline_posts(post_data=post_data)
+                post_complete = True
                 break
+
 
 # def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, model, use_cache=True):
 #     logger.info(f"Use Search term: {search_term}")
