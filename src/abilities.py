@@ -27,86 +27,93 @@ def reply_to_tweet_by_hashtag(hashtag, like, mood, nuance, ai_personality, model
 
     filtered_tweets, hashtag = get_tweets_and_filter(use_cached_tweets=use_cached_tweets, hashtag=hashtag)
 
-    if use_cached_tweets and sql_check_text_already_replied(filtered_tweets[-1]["full_text_hash"]):
-        # If the last element in the filtered tweet is already in the database, fetch new tweets
-        filtered_tweets, hashtag = get_tweets_and_filter(use_cached_tweets=False, hashtag=hashtag)
-
     logger.info(f"Got {len(filtered_tweets)} filtered tweets")
     logger.info("")
     c = 0
-    for tweet in filtered_tweets:
-        logger.info(f"Reply to Tweet by Hashtag {c}/{n_posts}")
-        if sql_check_text_already_replied(tweet["full_text_hash"]):
-            continue
+    post_complete = False
 
-        if not check_text_hastag_ratio(text=tweet["full_text"]):
-            logger.info(f"Hashtag to text ratio not passed")
-            continue
+    while True and not post_complete:
 
-        if "have questions" in tweet['full_text'].lower() or "have a question" in tweet['full_text'].lower():
-            mood = "with an answer"
+        if not filtered_tweets:
+            filtered_tweets, hashtag = get_tweets_and_filter(use_cached_tweets=False, hashtag=hashtag)
 
-        # prompt = build_twitter_prompt(mood=mood, question=tweet['full_text'], nuance=nuance)
-        chat_log, params = gpt_build_chat_log_conversation(newprompt= tweet['full_text'],
-                                                           ai_personality=ai_personality,
-                                                           max_output_len=max_response_len,
-                                                           rules=config.config["twitter_reply_rules_V2"], mood=mood,
-                                                           nuances=nuance)
+        for tweet in filtered_tweets:
 
-        response = []
+            logger.info(f"Reply to Tweet by Hashtag {c}/{n_posts}")
+            if sql_check_text_already_replied(tweet["full_text_hash"]):
+                filtered_tweets.pop()
+                continue
 
-        l_count = 0
-        max_l_count = 4
-        # Post the reply
-        while len(response) > max_response_len or not response:
-            time.sleep(5)
-            logger.info(f"{callersname()}: Answer too long, regenerate Len: {len(response)}")
-            response = ask_gpt(chat_log=chat_log, ai_personality=ai_personality, temperature=temperature, model=model,
-                               ability="reply_to_tweet_by_hashtag", params=params)
+            if not check_text_hastag_ratio(text=tweet["full_text"]):
+                logger.info(f"Hashtag to text ratio not passed")
+                filtered_tweets.pop()
+                continue
 
-            raw_response = response
-            response = replace_bad_hashtags(response)
-            response = clean_model_output(gpt_response=response)
+            if "have questions" in tweet['full_text'].lower() or "have a question" in tweet['full_text'].lower():
+                mood = "with an answer"
 
-            if len(response) > max_response_len:
-                response = replace_longest_hashtag(response, replacement="")
+            # prompt = build_twitter_prompt(mood=mood, question=tweet['full_text'], nuance=nuance)
+            chat_log, params = gpt_build_chat_log_conversation(newprompt= tweet['full_text'],
+                                                               ai_personality=ai_personality,
+                                                               max_output_len=max_response_len,
+                                                               rules=config.config["twitter_reply_rules_V2"], mood=mood,
+                                                               nuances=nuance)
 
-            l_count += 1
-            if l_count == max_l_count:
-                # After max_l_count tries break the loop
-                logger.info(f"{callersname()} : Response remains to long tried {l_count} times Skipping")
+            response = []
+
+            l_count = 0
+            max_l_count = 4
+            # Post the reply
+            while len(response) > max_response_len or not response:
+                time.sleep(5)
+                logger.info(f"{callersname()}: Answer too long, regenerate Len: {len(response)}")
+                response = ask_gpt(chat_log=chat_log, ai_personality=ai_personality, temperature=temperature, model=model,
+                                   ability="reply_to_tweet_by_hashtag", params=params)
+
+                raw_response = response
+                response = replace_bad_hashtags(response)
+                response = clean_model_output(gpt_response=response)
+
+                if len(response) > max_response_len:
+                    response = replace_longest_hashtag(response, replacement="")
+
+                l_count += 1
+                if l_count == max_l_count:
+                    # After max_l_count tries break the loop
+                    logger.info(f"{callersname()} : Response remains to long tried {l_count} times Skipping")
+                    break
+
+            # Reply to the tweet
+            if response == "NOT PASSED" or l_count == max_l_count:
+                continue
+
+            unified_logger_output(personality=ai_personality, nuance=nuance, mood=mood, temp=temperature, model=model)
+
+            logger.info("Sending Reply...")
+            status, error = reply_to_tweet(tweet=tweet, like=like, ai_response=response)
+
+            if error != 200:
+                logger.error(f"{callersname()} :Sending not Successful, Got error: {error}")
+
+            t = {
+                "hashtag": hashtag,
+                "input_tweet": tweet['full_text'],
+                "input_tweet_hash": tweet["full_text_hash"],
+                "input_tweet_id": tweet["id"],
+                "output_to_username": tweet["user"]['screen_name'],
+                "output_tweet": response,
+                "raw_model_response": raw_response,
+                "output_tweet_id": None if error != 200 else status.id,
+                "status": str(error),
+            }
+            # Write the new reply to the database
+            sql_write_replied_tweet_meta(tweet_data=t)
+            c += 1
+            if c == n_posts:
+                post_complete = True
                 break
-
-        # Reply to the tweet
-        if response == "NOT PASSED" or l_count == max_l_count:
-            continue
-
-        unified_logger_output(personality=ai_personality, nuance=nuance, mood=mood, temp=temperature, model=model)
-
-        logger.info("Sending Reply...")
-        status, error = reply_to_tweet(tweet=tweet, like=like, ai_response=response)
-
-        if error != 200:
-            logger.error(f"{callersname()} :Sending not Successful, Got error: {error}")
-
-        t = {
-            "hashtag": hashtag,
-            "input_tweet": tweet['full_text'],
-            "input_tweet_hash": tweet["full_text_hash"],
-            "input_tweet_id": tweet["id"],
-            "output_to_username": tweet["user"]['screen_name'],
-            "output_tweet": response,
-            "raw_model_response": raw_response,
-            "output_tweet_id": None if error != 200 else status.id,
-            "status": str(error),
-        }
-        # Write the new reply to the database
-        sql_write_replied_tweet_meta(tweet_data=t)
-        c += 1
-        if c == n_posts:
-            break
-        else:
-            time.sleep(random.randrange(1, 5))
+            else:
+                time.sleep(random.randrange(1, 5))
 
 
 def reply_to_mentions(like, mood, nuance, ai_personality, temperature, model, max_response_len=280):
@@ -213,50 +220,65 @@ def reply_to_mentions(like, mood, nuance, ai_personality, temperature, model, ma
 
 def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, model, use_cache=True, randomize=True,
                     max_response_len=260):
-    logger.info(f"Use Search term: {search_term}")
 
-    news_api_news, search_term = returns_news_list_news_api(search_term=search_term, use_cache=use_cache, use_api=True,
+    logger.info(f"Use Search term: {search_term}")
+    #ToDo filtern out responsesmlike "wow, that's a tempting offer, but i'm always a bit of amazing deals like this. i've heard of hidden fees and restrictions that can make it less of a bargain. would definitely recommend doing more research before booking. #traveltips #airfare"
+
+    news_api_news, search_term = returns_news_list_news_api(search_term=search_term, use_cache=use_cache,
+                                                            use_api=True,
                                                             hrs_since_news=8)
+
     if not news_api_news:
         logger.info(f"No News found most probably the API limit reached")
         # This only happens when the api limit is reached
         return
 
-    last_ten_posts = [x[0] for x in sql_get_n_latest_records(table_name='timeline_posts', column_name="body", n=10)]
+    logger.info(f"Got {len(news_api_news)} News")
+    logger.info("")
+
     c = 0
     post_complete = False
+
+    result_list = None
 
     while True and not post_complete:
         if c > 5:
             logger.info(f"No news after {c} Tries, Quit")
             break
 
-        c += 1
-        time.sleep(random.randrange(2,5))
-
-        result_list = [v for v in news_api_news if
-                       all(get_cosine_similarity_score(text1=v["body"], text2=i) <= 0.45 for i in last_ten_posts)]
 
         if not result_list:
 
-            logger.info(f"No Results from News Search API: {result_list}")
+            last_ten_posts = [x[0] for x in
+                              sql_get_n_latest_records(table_name='timeline_posts', column_name="body", n=10)]
 
-            news_api_news, search_term = return_news_list(search_term=search_term, use_cache=False, use_api=True,
-                                                          hrs_since_news=8)
             result_list = [v for v in news_api_news if
                            all(get_cosine_similarity_score(text1=v["body"], text2=i) <= 0.45 for i in last_ten_posts)]
 
+            for v in result_list:
+                if sql_news_already_posted(get_hash(v["description"]), url=v["url"]):
+                    logger.info("No action news already posted")
+                    logger.info(f'{v["description"]} {v["url"]}')
+                    result_list.pop()
+                    continue
+
+            if not result_list or sql_get_n_latest_records(table_name='timeline_posts', column_name="body", n=1) == news_api_news[-1]["body"]:
+                news_api_news, search_term = returns_news_list_news_api(search_term=search_term, use_cache=False,
+                                                                    use_api=True,
+                                                                    hrs_since_news=10)
+                c += 1
+                continue
+
+
         if result_list:
             for v in result_list:
-
                 if randomize:
                     v = random.choice(result_list)
 
                 body = v["body"]
 
-                if sql_news_already_posted(get_hash(v["description"]), url=v["url"]):
-                    logger.info("No action news already posted")
-                    continue
+                c += 1
+                time.sleep(random.randrange(2, 5))
 
                 logger.info('News: ' + unicodedata.normalize("NFKD", body))
                 logger.info(f"Link: {v['url']}")
@@ -289,6 +311,8 @@ def post_news_tweet(search_term, mood, nuance, ai_personality, temperature, mode
 
                 if response == "NOT PASSED" or l_count == max_l_count:
                     continue
+
+                response = remove_content_between_markers(text=response,start_marker=", but it's also important", end_marker=" #")
 
                 tweet = f"{response} {v['url']}"
                 unified_logger_output(model_response=response, personality=ai_personality, nuance=nuance, mood=mood,
