@@ -169,20 +169,17 @@ def sql_news_already_posted(hash_, url=None):
     url = str(url)
 
     if (db.execute(
-            "SELECT EXISTS(SELECT 1 FROM timeline_posts WHERE input_text_hash='" + hash_ + "' LIMIT 1)").fetchone()[
-        0] > 0):
+            "SELECT EXISTS(SELECT 1 FROM timeline_posts WHERE input_text_hash='" + hash_ + "' LIMIT 1)").fetchone()[0] > 0):
         _.append(True)
     if url and (
             db.execute(
                 "SELECT EXISTS(SELECT 1 FROM timeline_posts WHERE input_text_url='"
                 + url
                 + "' LIMIT 1)"
-            ).fetchone()[0]
-            > 0
-    ):
+            ).fetchone()[0] > 0):
         _.append(True)
 
-    if _ and sum(_) == len(_):
+    if _ and all(_):
         return True
     else:
         return False

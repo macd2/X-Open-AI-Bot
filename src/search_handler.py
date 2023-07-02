@@ -137,10 +137,10 @@ def get_news_news_api(search_term, type_: str):
         elif search_term in ['Discoveries']:
             category = random.choice([
                 # 'science',
-                "general",
+                'general',
                 'technology'])
         else:
-            category = 'business',  # ['business',
+            category = 'business'  # ['business',
             # 'entertainment',
             # 'general',
             # 'health',
