@@ -193,7 +193,7 @@ def get_tweets_and_filter(use_cached_tweets, hashtag):
         filtered_tweets = filter_tweets_from_response(tweepy_response, min_text_len=70)
         if not filtered_tweets:
             logger.info(f"Found no Tweets for Hashtag: {hashtag}")
-            hashtag = random.choice(config["hashtags"])
+            hashtag = random.choice(config["keywords"])
             logger.info(f"Try new Hashtag: {hashtag}")
 
     write_pickle(obj=filtered_tweets, filename=cached_filtered_tweets_file_name, hashtag=hashtag)

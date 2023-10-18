@@ -20,7 +20,7 @@ def reply_tweet():
         like = random.choice(config["likes"])
         model = config["models"][0]
 
-        hashtag = random.choice(config["hashtags"])
+        hashtag = random.choice(config["keywords"])
 
         reply_to_tweet_by_hashtag(hashtag=hashtag, like=like, mood=mood, nuance=nuance, model=model, ai_personality=ai_personality, temperature=temperature, use_cached_tweets=True, n_posts =5,max_response_len=280)
 
@@ -58,7 +58,7 @@ def post_news():
 
         search_term = random.choice(config["search_terms"])
 
-        post_news_tweet(search_term=search_term, mood=mood, nuance=nuance, ai_personality=ai_personality,  temperature=temperature, model=model,max_response_len=260, randomize=True)
+        post_news_tweet(search_term=search_term, mood=mood, nuance=nuance, ai_personality=ai_personality,  temperature=temperature, model=model, max_response_len=250, randomize=True)
 
         sleep_time = random.randrange(1 * 60 * 60, 3 * 60 * 60)
         logger.info(f"Post new tweets complete sleeping for minutes: {int(sleep_time / 60)}")
@@ -75,8 +75,3 @@ if __name__ == "__main__":
     p1.join()
     p2.join()
     p3.join()
-
-# For testing
-# reply_tweet()
-# reply_mentions()
-# post_news()

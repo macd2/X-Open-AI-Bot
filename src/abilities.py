@@ -166,7 +166,8 @@ def reply_to_mentions(like, mood, nuance, ai_personality, temperature, model, ma
             # Make sure the response length is within Twitter's limit
             while len(response) > max_response_len or not response:
                 time.sleep(random.randrange(5, 10))
-                logger.info(f"{callersname()}: Response too long! Regenerating Len: {len(response)}")
+                if response:
+                    logger.info(f"{callersname()}: Response too long! Regenerating Len: {len(response)}")
                 response = ask_gpt(chat_log=chat_log, ai_personality=ai_personality,
                                    temperature=temperature,
                                    model=model, ability="reply_to_mentions", params=params)

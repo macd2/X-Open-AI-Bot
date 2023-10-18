@@ -10,7 +10,7 @@ def mood_generator(question, mood, filter_words=None):
 
     filter_words = [x.lower() for x in filter_words]
     if not set(question.replace("#", "").lower().split()).isdisjoint(filter_words):
-        return "as if you where sarcastic, pretend to be extremely arrogant"
+        return config.config["response_mood_if_filter"]
     else:
         return mood
 
