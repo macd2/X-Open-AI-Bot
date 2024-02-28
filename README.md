@@ -62,7 +62,7 @@ To run the bot you also need an OpenAi API Key for ChatGPT
 		* this defines with which mood the bot should respond to mentions
 	- **moods_news_post**
 		* the mood for tweets based on news
-	- **strong text**nuances
+	- **nuances**
 		* the nuance is the L3 of the personality and adds fine tuning to the personality of the bot. 
 	- **mood_filter_words**
 		* this defines the keywords once detected change the mood of the bot. For example: If the keyword "Asexual" was detected in the tweet than the bot change change its attitude / mood.
