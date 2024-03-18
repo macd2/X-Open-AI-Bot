@@ -52,10 +52,10 @@ To run the bot you also need an OpenAi API Key for ChatGPT
 - **Keywords:**
 		* This defines which topics the the bot should search and reply to.
 - **Search_terms**
-		* Search terms used for new search for new tweets
+		* Search terms used for new for new tweet search
 ### Personality - The personality consist of 3 Layers (L1, L2 and L3)
 - **ai_personalities**
-		* L1 The bot can change its personality based on this list. By default a random personality out of this list is chosen on each new tweet. You can experiment with list to get the desired bot personality. 
+ 		* L1 The bot can change its personality based on this list. By default a random personality out of this list is chosen on each new tweet. You can experiment with list to get the desired bot personality. 
 	- **moods**
 		* this is L2 of personality and adds finer control on how the bot should respond. You could define a personality but than make the bot always sarcastic with the mood controller. By default a random personality is combined with a random mood if you want a more consistent bot personality you can change that by only have one personality and one mood defined.
 	- **moods_reply_mentions**
@@ -65,9 +65,9 @@ To run the bot you also need an OpenAi API Key for ChatGPT
 	- **nuances**
 		* the nuance is the L3 of the personality and adds fine tuning to the personality of the bot. 
 	- **mood_filter_words**
-		* this defines the keywords once detected change the mood of the bot. For example: If the keyword "Asexual" was detected in the tweet than the bot change change its attitude / mood.
+		* this defines the keywords once detected change the mood of the bot. For example: If the keyword "Asexual" was detected in a tweet than the bot will change its attitude / mood.
 	- **response_mood_if_filter**
-		* here you define the personality to bot should switch to if one of the mood_filter_words was detected.
+		* here you define the personality the bot should switch to if one of the mood_filter_words was detected.
 - **twitter_reply_rules_V2**
 		* this is the prompt engineering of the bot and the base for the actual prompt that is send to ChatGPT. Here you can define all the rules you want ChatGPT to follow for the response. High-quality rules lead to better ChatGPT outputs.
 - **temps**
